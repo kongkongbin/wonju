@@ -8,11 +8,25 @@ export function unlockSpeech() {
   synth?.speak(new SpeechSynthesisUtterance(''));
 }
 
-export function speak(text) {
-  if (!synth) return;
+/** @param {() => void} [onDone] 다 읽었을 때 (중간에 멈춰도 불린다) */
+export function speak(text, onDone) {
+  if (!synth) return onDone?.();
   synth.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'ko-KR';
+  if (onDone) {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      onDone();
+    };
+    // 끝났다는 신호를 주지 않는 기기가 있어서, 글자 수로 넉넉히 잡은 시간이 지나도 넘어간다
+    const timer = setTimeout(finish, 2000 + text.length * 300);
+    utterance.onend = finish;
+    utterance.onerror = finish;
+  }
   synth.speak(utterance);
 }
 

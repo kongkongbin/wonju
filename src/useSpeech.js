@@ -12,21 +12,27 @@ const ERRORS = {
   network: '음성인식 서버에 연결하지 못했습니다. 글로 입력해 주세요.',
 };
 
-/**
- * 음성 입력. toggle로 시작·중지한다.
- * onText: 말하는 동안 지금까지 인식한 문장, onDone: 말이 끝났을 때 (인식한 말이 있고 오류·취소가 없을 때만)
- */
+/** 음성 입력. 듣는 중에 toggle을 다시 부르면 멈춘다 */
 export function useSpeech() {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState(null);
   const rec = useRef(null);
 
-  function toggle(onText, onDone) {
+  /**
+   * @param {object} o
+   * @param {(text: string) => void} o.onText 말하는 동안 지금까지 인식한 문장
+   * @param {() => void} o.onDone 말이 끝났을 때 (인식한 말이 있고 오류·취소가 없을 때만)
+   * @param {(failure: string|null) => void} [o.onNothing] 인식한 말 없이 끝났을 때
+   * @param {number} [o.waitMs] 아무 말이 없으면 이 시간 뒤에 멈춘다 (아이폰은 스스로 끝내지 않을 수 있다)
+   * @param {boolean} [o.quiet] 오류 문구를 화면에 띄우지 않는다
+   */
+  function toggle({ onText, onDone, onNothing, waitMs, quiet }) {
     if (rec.current) return rec.current.stop();
     setError(null);
     const r = new Recognition();
     let heard = false;
-    let silence;
+    let failure = null;
+    let silence = waitMs ? setTimeout(() => r.stop(), waitMs) : undefined;
     r.lang = 'ko-KR';
     r.interimResults = true;
     r.onresult = (e) => {
@@ -38,23 +44,35 @@ export function useSpeech() {
     };
     r.onerror = (e) => {
       heard = false;
-      if (e.error !== 'aborted') setError(ERRORS[e.error] ?? '음성을 인식하지 못했습니다. 글로 입력해 주세요.');
+      failure = e.error;
+      if (!quiet && e.error !== 'aborted') setError(ERRORS[e.error] ?? '음성을 인식하지 못했습니다. 글로 입력해 주세요.');
     };
     r.onend = () => {
       clearTimeout(silence);
+      if (r.cancelled) return;
       rec.current = null;
       setListening(false);
-      if (heard && !r.cancelled) onDone();
+      if (heard) onDone();
+      else onNothing?.(failure);
     };
     rec.current = r;
-    r.start();
-    setListening(true);
+    try {
+      r.start();
+      setListening(true);
+    } catch {
+      // 사용자가 누르지 않았을 때 시작을 막는 브라우저가 있다
+      clearTimeout(silence);
+      rec.current = null;
+      onNothing?.('not-allowed');
+    }
   }
 
   function cancel() {
     if (!rec.current) return;
     rec.current.cancelled = true;
     rec.current.abort();
+    rec.current = null;
+    setListening(false);
   }
 
   return { supported: !!Recognition, listening, error, toggle, cancel };

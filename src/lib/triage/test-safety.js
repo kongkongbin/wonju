@@ -31,3 +31,13 @@ if (isMild({ finalLevel: 3, call119: false, confidence: 0.9 })) throw new Error(
 if (firstSentence('체온은 38.5도입니다. 그 다음 문장.') !== '체온은 38.5도입니다.') throw new Error('첫 문장 자르기 실패');
 if (firstSentence('마침표가 없는 문장') !== '마침표가 없는 문장') throw new Error('마침표 없는 문장 처리 실패');
 console.log('음성 안내 검사 통과');
+
+// 호흡곤란 표현: 조사가 붙거나 띄어 써도 잡는다. 음성 질문에 "네"로 답해도 잡고, "아니요"는 잡지 않는다
+for (const text of ['숨쉬기가 힘들어요', '숨 쉬기가 너무 힘들어요', '숨쉬기 어려워요', '호흡이 힘들어요', '호흡하기가 어려워요', '호흡곤란이 있어요']) {
+  if (safetyFloor(text).floor !== 2) throw new Error(`호흡곤란을 놓침: ${text}`);
+}
+const answered = (text) => safetyFloor(safetyText([{ text, question: '숨쉬기가 힘든가요?' }])).floor;
+if (answered('네') !== 2) throw new Error('"네"를 위급으로 보지 않음');
+if (answered('잘 모르겠어요') !== 2) throw new Error('모호한 답은 위급 쪽으로 봐야 함');
+if (answered('아니요') !== null) throw new Error('"아니요"를 위급으로 봄');
+console.log('호흡곤란 표현 검사 통과');

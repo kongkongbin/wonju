@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { requestTriage } from './api.js';
+import FollowupPanel from './components/FollowupPanel.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import { spokenSummary } from './lib/triage/spoken.js';
 import { canSpeak, speak, stopSpeaking, unlockSpeech } from './speak.js';
+import { useFollowups } from './useFollowups.js';
 import { useSpeech } from './useSpeech.js';
 
 const EXAMPLES = [
@@ -25,7 +27,6 @@ function MicIcon({ listening }) {
 }
 
 export default function App() {
-  const [turns, setTurns] = useState([]); // 사용자가 보낸 입력들 { text, question? }
   const [items, setItems] = useState([]); // 화면에 보이는 대화 { role, ... }
   const [draft, setDraft] = useState('');
   const [question, setQuestion] = useState(null); // 지금 답하고 있는 추가 질문
@@ -34,11 +35,14 @@ export default function App() {
   const [voiceUsed, setVoiceUsed] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
+  const turns = useRef([]); // 사용자가 보낸 입력들 { text, question? }. 음성 되묻기 콜백에서도 최신 값을 읽어야 해서 ref로 둔다
+  const asked = useRef(false); // 음성 되묻기는 대화마다 한 번만 한다
   const voiceTurn = useRef(false); // 이번 입력을 말로 했는가. 말로 물으면 말로 답하고, 글로 물으면 조용히 둔다
   const bottomRef = useRef(null);
   const lastRef = useRef(null);
   const inputRef = useRef(null);
   const speech = useSpeech();
+  const followups = useFollowups(speech, (answers) => judge(answers, true));
 
   useEffect(() => {
     // 판정이 나오면 카드의 맨 위(단계와 다음 행동)가 보이게 한다
@@ -56,33 +60,45 @@ export default function App() {
     if (!mutedRef.current) speak(text);
   }
 
-  async function send(text) {
-    setSendSoon(false);
-    const trimmed = text.trim();
-    if (!trimmed || loading) return;
+  /** 판정을 말로 알려 주고, 위급하지 않으면 질문을 이어 간다 (위급하면 119만 말해서 신고를 늦추지 않는다) */
+  function replyAloud(result) {
+    const questions = result.missing_info_questions.slice(0, 3);
+    if (mutedRef.current || result.call119 || !questions.length || !speech.supported || asked.current) {
+      return say(spokenSummary(result));
+    }
+    asked.current = true;
+    followups.start(questions, `${spokenSummary(result)} 몇 가지만 여쭤볼게요. `);
+  }
 
-    speech.cancel(); // 듣는 중이면 멈춘다. 늦게 온 인식 결과가 비운 입력창을 다시 채우지 않게
+  async function judge(newTurns, aloud) {
     stopSpeaking();
-    const replyAloud = voiceTurn.current;
-    voiceTurn.current = false;
-    const turn = { text: trimmed, question };
-    const nextTurns = [...turns, turn];
-    setTurns(nextTurns);
-    setItems((prev) => [...prev, { role: 'user', ...turn }]);
+    turns.current = [...turns.current, ...newTurns];
+    setItems((prev) => [...prev, ...newTurns.map((t) => ({ role: 'user', ...t }))]);
     setDraft('');
     setQuestion(null);
     setLoading(true);
 
     try {
-      const result = await requestTriage(nextTurns);
+      const result = await requestTriage(turns.current);
       setItems((prev) => [...prev, { role: 'bot', result }]);
-      if (replyAloud) say(spokenSummary(result));
+      if (aloud) replyAloud(result);
     } catch (e) {
       setItems((prev) => [...prev, { role: 'error', message: e.message }]);
-      if (replyAloud) say('판정하지 못했습니다. 위급하면 바로 119에 전화하세요.');
+      if (aloud) say('판정하지 못했습니다. 위급하면 바로 119에 전화하세요.');
     } finally {
       setLoading(false);
     }
+  }
+
+  function send(text) {
+    setSendSoon(false);
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    speech.cancel(); // 듣는 중이면 멈춘다. 늦게 온 인식 결과가 비운 입력창을 다시 채우지 않게
+    const aloud = voiceTurn.current;
+    voiceTurn.current = false;
+    judge([{ text: trimmed, question }], aloud);
   }
 
   function toggleMic() {
@@ -92,10 +108,10 @@ export default function App() {
     setVoiceUsed(true);
     voiceTurn.current = true;
     const base = draft.trim();
-    speech.toggle(
-      (text) => setDraft(base ? `${base} ${text}` : text),
-      () => setSendSoon(true),
-    );
+    speech.toggle({
+      onText: (text) => setDraft(base ? `${base} ${text}` : text),
+      onDone: () => setSendSoon(true),
+    });
   }
 
   function answer(q) {
@@ -114,14 +130,17 @@ export default function App() {
     mutedRef.current = !muted;
     setMuted(!muted);
     stopSpeaking();
+    if (followups.qa) followups.stop();
   }
 
   function reset() {
     speech.cancel();
     stopSpeaking();
+    followups.discard();
     voiceTurn.current = false;
+    asked.current = false;
+    turns.current = [];
     setSendSoon(false);
-    setTurns([]);
     setItems([]);
     setDraft('');
     setQuestion(null);
@@ -215,7 +234,7 @@ export default function App() {
                 result={item.result}
                 reported={items.slice(0, i).filter((x) => x.role === 'user').map((x) => x.text)}
                 onAnswer={answer}
-                answerable={i === lastBotIndex && !loading}
+                answerable={i === lastBotIndex && !loading && !followups.qa}
                 onReplay={() => speak(spokenSummary(item.result))}
               />
             </div>
@@ -230,57 +249,61 @@ export default function App() {
         <div ref={bottomRef} />
       </main>
 
-      <form className="composer" onSubmit={onSubmit}>
-        {question && (
-          <div className="replying">
-            <span>답변 중: {question}</span>
-            <button type="button" onClick={() => setQuestion(null)} aria-label="질문 선택 취소">
-              ×
-            </button>
-          </div>
-        )}
-        {speech.error && <p className="note warn">{speech.error}</p>}
-        {sendSoon && (
-          <div className="sending" role="status">
-            <span>곧 보냅니다. 잘못 들었으면 취소하세요.</span>
-            <button type="button" onClick={cancelSend}>
-              취소
-            </button>
-            <i className="sending-bar" />
-          </div>
-        )}
-        <div className="row">
-          <textarea
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => {
-              setSendSoon(false);
-              setDraft(e.target.value);
-            }}
-            onKeyDown={onKeyDown}
-            rows={2}
-            maxLength={1000}
-            aria-label="증상 입력"
-            placeholder={speech.listening ? '듣고 있습니다. 말씀해 주세요' : question ? '질문에 대한 답을 입력하세요' : turns.length ? '추가로 알려 주실 내용을 입력하세요' : '증상을 입력하세요'}
-            disabled={loading}
-          />
-          {speech.supported && !isEmpty && (
-            <button
-              type="button"
-              className={speech.listening ? 'mic on' : 'mic'}
-              onClick={toggleMic}
-              disabled={loading}
-              aria-pressed={speech.listening}
-              aria-label={speech.listening ? '듣기 중지' : '음성으로 입력'}
-            >
-              <MicIcon listening={speech.listening} />
-            </button>
+      {followups.qa ? (
+        <FollowupPanel qa={followups.qa} onSkip={followups.skip} onStop={followups.stop} onTap={followups.answerByTap} />
+      ) : (
+        <form className="composer" onSubmit={onSubmit}>
+          {question && (
+            <div className="replying">
+              <span>답변 중: {question}</span>
+              <button type="button" onClick={() => setQuestion(null)} aria-label="질문 선택 취소">
+                ×
+              </button>
+            </div>
           )}
-          <button type="submit" disabled={loading || !draft.trim()}>
-            보내기
-          </button>
-        </div>
-      </form>
+          {speech.error && <p className="note warn">{speech.error}</p>}
+          {sendSoon && (
+            <div className="sending" role="status">
+              <span>곧 보냅니다. 잘못 들었으면 취소하세요.</span>
+              <button type="button" onClick={cancelSend}>
+                취소
+              </button>
+              <i className="sending-bar" />
+            </div>
+          )}
+          <div className="row">
+            <textarea
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => {
+                setSendSoon(false);
+                setDraft(e.target.value);
+              }}
+              onKeyDown={onKeyDown}
+              rows={2}
+              maxLength={1000}
+              aria-label="증상 입력"
+              placeholder={speech.listening ? '듣고 있습니다. 말씀해 주세요' : question ? '질문에 대한 답을 입력하세요' : isEmpty ? '증상을 입력하세요' : '추가로 알려 주실 내용을 입력하세요'}
+              disabled={loading}
+            />
+            {speech.supported && !isEmpty && (
+              <button
+                type="button"
+                className={speech.listening ? 'mic on' : 'mic'}
+                onClick={toggleMic}
+                disabled={loading}
+                aria-pressed={speech.listening}
+                aria-label={speech.listening ? '듣기 중지' : '음성으로 입력'}
+              >
+                <MicIcon listening={speech.listening} />
+              </button>
+            )}
+            <button type="submit" disabled={loading || !draft.trim()}>
+              보내기
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

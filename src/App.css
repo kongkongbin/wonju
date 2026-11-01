@@ -650,6 +650,35 @@ a {
   }
 }
 
+/* 음성 되묻기 */
+.followup-question {
+  margin: 2px 0 8px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.followup-status {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.followup-status.on {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.followup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.followup-actions .ghost {
+  flex: 1;
+  min-height: 44px;
+}
+
 .row {
   display: flex;
   gap: 8px;
