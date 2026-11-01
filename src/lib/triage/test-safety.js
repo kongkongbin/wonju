@@ -1,3 +1,4 @@
+import { painSentence } from './body.js';
 import { firstSentence, isMild, spokenSummary } from './spoken.js';
 import assert from 'node:assert/strict';
 import { safetyFloor, safetyText } from './safety.js';
@@ -41,3 +42,18 @@ if (answered('네') !== 2) throw new Error('"네"를 위급으로 보지 않음'
 if (answered('잘 모르겠어요') !== 2) throw new Error('모호한 답은 위급 쪽으로 봐야 함');
 if (answered('아니요') !== null) throw new Error('"아니요"를 위급으로 봄');
 console.log('호흡곤란 표현 검사 통과');
+
+// 몸 그림 문장: 받침에 맞는 조사, 아이 표시
+const painCases = [
+  [[['가슴'], false], '가슴이 아파요'],
+  [[['머리'], false], '머리가 아파요'],
+  [[['윗배', '왼쪽 팔'], false], '윗배, 왼쪽 팔이 아파요'],
+  [[['허리'], true], '아이가 허리가 아파요'],
+  [[['온몸'], false], '온몸이 아파요'],
+  [[[], true], ''],
+];
+for (const [[parts, child], expected] of painCases) {
+  const got = painSentence(parts, child);
+  if (got !== expected) throw new Error(`몸 그림 문장 오류: ${got} (기대: ${expected})`);
+}
+console.log('몸 그림 문장 검사 통과');

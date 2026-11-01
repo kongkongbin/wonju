@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { requestTriage } from './api.js';
+import BodyMap from './components/BodyMap.jsx';
 import FollowupPanel from './components/FollowupPanel.jsx';
+import { MicIcon, PhoneIcon, StopIcon } from './components/icons.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import { spokenSummary } from './lib/triage/spoken.js';
 import { canSpeak, speak, stopSpeaking, unlockSpeech } from './speak.js';
@@ -13,18 +15,6 @@ const EXAMPLES = [
   '왼쪽 머리가 가끔 찌릿한 느낌이 있어요',
 ];
 const SEND_DELAY_MS = 2000; // 말이 끝나고 보내기까지 잘못 들은 말을 취소할 시간 (App.css .sending-bar와 맞춘다)
-
-function MicIcon({ listening }) {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
-      {listening ? (
-        <rect x="6" y="6" width="12" height="12" rx="2" />
-      ) : (
-        <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z" />
-      )}
-    </svg>
-  );
-}
 
 export default function App() {
   const [items, setItems] = useState([]); // 화면에 보이는 대화 { role, ... }
@@ -178,6 +168,7 @@ export default function App() {
             </button>
           )}
           <a className="call" href="tel:119" aria-label="119에 전화하기">
+            <PhoneIcon size={18} />
             119
           </a>
         </div>
@@ -190,7 +181,7 @@ export default function App() {
             {speech.supported ? (
               <>
                 <button type="button" className={speech.listening ? 'mic-hero on' : 'mic-hero'} onClick={toggleMic} disabled={loading} aria-pressed={speech.listening}>
-                  <MicIcon listening={speech.listening} />
+                  {speech.listening ? <StopIcon size={26} /> : <MicIcon size={26} />}
                   {speech.listening ? '듣고 있습니다. 말씀해 주세요' : '눌러서 말하기'}
                 </button>
                 <p className="hint">말이 끝나면 바로 판정합니다. 아래에 글로 적어도 됩니다.</p>
@@ -198,6 +189,13 @@ export default function App() {
             ) : (
               <p className="hint">일상적인 말로 편하게 적어 주세요.</p>
             )}
+            <BodyMap
+              onChange={(sentence) => {
+                setSendSoon(false);
+                setDraft(sentence);
+              }}
+              onSubmit={send}
+            />
             <p className="disclaimer">
               참고용 보조 도구이며 진단이 아닙니다. 의식이 없거나 숨쉬기 힘들거나 심한 출혈이 있으면 바로 <a href="tel:119">119</a>에 연락하세요.
             </p>
@@ -295,7 +293,7 @@ export default function App() {
                 aria-pressed={speech.listening}
                 aria-label={speech.listening ? '듣기 중지' : '음성으로 입력'}
               >
-                <MicIcon listening={speech.listening} />
+                {speech.listening ? <StopIcon size={24} /> : <MicIcon size={24} />}
               </button>
             )}
             <button type="submit" disabled={loading || !draft.trim()}>

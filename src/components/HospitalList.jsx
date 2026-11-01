@@ -2,10 +2,22 @@ import { useState } from 'react';
 import { requestHospitals } from '../api.js';
 import { fallbackIfNoApp, naverDirections } from '../lib/hospital/directions.js';
 import { getPosition, WONJU } from '../position.js';
+import { BedIcon, HospitalIcon, PhoneIcon, RouteIcon } from './icons.jsx';
 
 function bedsLabel(n) {
   if (n == null) return '정보 없음';
   return n > 0 ? `${n}개` : '여유 없음';
+}
+
+/** 병상 상태 표시. 색과 함께 글자로도 알려 준다 */
+function Beds({ label, count }) {
+  const state = count == null ? 'unknown' : count > 0 ? 'ok' : 'full';
+  return (
+    <span className={`beds ${state}`}>
+      <BedIcon size={16} />
+      {label} {bedsLabel(count)}
+    </span>
+  );
 }
 
 /** YYYYMMDDHHmmss → HH:mm */
@@ -15,6 +27,7 @@ export function DirectionsLink({ h, pos }) {
   const { href, newTab, fallback } = naverDirections(h, pos);
   return (
     <a href={href} target={newTab ? '_blank' : undefined} rel="noreferrer" onClick={fallback ? () => fallbackIfNoApp(fallback) : undefined}>
+      <RouteIcon size={18} />
       길찾기
     </a>
   );
@@ -45,6 +58,7 @@ export default function HospitalList({ urgent, pediatric, primary }) {
     return (
       <div className="hospitals">
         <button type="button" className={primary ? 'action' : 'ghost'} onClick={load}>
+          <HospitalIcon />
           {state.status === 'error' ? '다시 시도' : '가까운 응급실 찾기'}
         </button>
         {state.status === 'error' && <p className="note warn">{state.message}</p>}
@@ -77,14 +91,11 @@ export default function HospitalList({ urgent, pediatric, primary }) {
               <strong>{h.name}</strong>
               <span className="hint">{h.km}km</span>
             </div>
-            <div className="hint">
-              응급실 병상 {bedsLabel(h.erBeds)}
-              {pediatric && ` · 소아 병상 ${bedsLabel(h.pedBeds)}`}
-              {h.ct === 'Y' && ' · CT'}
-              {h.mri === 'Y' && ' · MRI'}
-              {h.angio === 'Y' && ' · 혈관조영'}
-              {h.updatedAt && ` · ${timeLabel(h.updatedAt)}`}
+            <div className="beds-row">
+              <Beds label="응급실" count={h.erBeds} />
+              {pediatric && <Beds label="소아" count={h.pedBeds} />}
             </div>
+            <div className="hint">{[h.ct === 'Y' && 'CT', h.mri === 'Y' && 'MRI', h.angio === 'Y' && '혈관조영', h.updatedAt && timeLabel(h.updatedAt)].filter(Boolean).join(' · ')}</div>
             {h.notices === null && <p className="hint">진료 제한 정보를 확인하지 못했습니다. 전화로 확인해 주세요.</p>}
             {h.notices?.length > 0 && (
               <details className="notices" open={h.notices.length <= 3}>
@@ -98,7 +109,12 @@ export default function HospitalList({ urgent, pediatric, primary }) {
             )}
             <div className="hospital-actions">
               <DirectionsLink h={h} pos={state.pos} />
-              {h.tel && <a href={`tel:${h.tel}`}>전화 {h.tel}</a>}
+              {h.tel && (
+                <a href={`tel:${h.tel}`}>
+                  <PhoneIcon size={18} />
+                  전화 {h.tel}
+                </a>
+              )}
             </div>
           </li>
         ))}

@@ -3,6 +3,7 @@ import { canSpeak } from '../speak.js';
 import Call119Help from './Call119Help.jsx';
 import ClinicList from './ClinicList.jsx';
 import HospitalList from './HospitalList.jsx';
+import { PhoneIcon, SpeakerIcon } from './icons.jsx';
 
 const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
 
@@ -31,6 +32,25 @@ function MildCare({ pediatric, department }) {
         <li>증상이 나빠지거나 걱정되면 망설이지 말고 응급실이나 119에 연락하세요.</li>
       </ul>
     </>
+  );
+}
+
+/** 5단계 중 어디인지 한눈에 보여 준다. 위치와 숫자로도 알 수 있어서 색만으로 구분하지 않는다 */
+function LevelScale({ level }) {
+  return (
+    <div className="scale" role="img" aria-label={`5단계 중 ${level}단계, ${LEVEL_LABEL[level]}. 1단계가 가장 위급합니다`}>
+      <ol>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <li key={n} className={n === level ? `level-${n} current` : ''}>
+            {n}
+          </li>
+        ))}
+      </ol>
+      <div className="scale-ends">
+        <span>가장 위급</span>
+        <span>덜 급함</span>
+      </div>
+    </div>
   );
 }
 
@@ -73,12 +93,14 @@ export default function ResultCard({ result, reported, onAnswer, answerable, onR
         </div>
         {canSpeak && (
           <button type="button" className="replay" onClick={onReplay}>
+            <SpeakerIcon size={18} />
             듣기
           </button>
         )}
       </header>
 
       <div className="result-body">
+        <LevelScale level={level} />
         {urgent ? (
           <>
             <div role="alert">
@@ -86,6 +108,7 @@ export default function ResultCard({ result, reported, onAnswer, answerable, onR
               <p className="lead">응급 가능성이 높습니다. 이 결과를 기다리지 말고 연락하세요.</p>
             </div>
             <a className="action call-action" href="tel:119">
+              <PhoneIcon size={22} />
               119 전화하기
             </a>
             <Call119Help population={result.symptom.population} reported={reported} judgement={`KTAS ${level} · ${LEVEL_LABEL[level]}, ${result.symptom.name}`} />

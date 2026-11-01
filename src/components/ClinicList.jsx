@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { requestClinics } from '../api.js';
 import { getPosition, WONJU } from '../position.js';
 import { DirectionsLink } from './HospitalList.jsx';
+import { HospitalIcon, PhoneIcon } from './icons.jsx';
 
 /** HHmm → HH:mm */
 const clock = (s) => `${s.slice(0, 2)}:${s.slice(2)}`;
@@ -29,6 +30,7 @@ export default function ClinicList({ pediatric, department }) {
     return (
       <div className="hospitals">
         <button type="button" className="action" onClick={load}>
+          <HospitalIcon />
           {state.status === 'error' ? '다시 시도' : '지금 진료 중인 병원 찾기'}
         </button>
         {state.status === 'error' && <p className="note warn">{state.message}</p>}
@@ -61,7 +63,12 @@ export default function ClinicList({ pediatric, department }) {
             <div className="hint">진료과목: {c.departments.join(', ')}</div>
             <div className="hospital-actions">
               <DirectionsLink h={c} pos={state.pos} />
-              {c.tel && <a href={`tel:${c.tel}`}>전화 {c.tel}</a>}
+              {c.tel && (
+                <a href={`tel:${c.tel}`}>
+                  <PhoneIcon size={18} />
+                  전화 {c.tel}
+                </a>
+              )}
             </div>
           </li>
         ))}
