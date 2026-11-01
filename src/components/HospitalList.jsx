@@ -22,9 +22,9 @@ export function DirectionsLink({ h, pos }) {
 
 /**
  * 가까운 응급실 목록: 실시간 가용병상, 길찾기(네이버 지도), 응급실 전화
- * @param {{urgent: boolean, pediatric: boolean}} props urgent: KTAS 1~2 (직접 이동보다 119 우선), pediatric: 소아 판정
+ * @param {{urgent: boolean, pediatric: boolean, primary: boolean}} props urgent: KTAS 1~2 (직접 이동보다 119 우선), pediatric: 소아 판정, primary: 이 화면의 주된 행동인가
  */
-export default function HospitalList({ urgent, pediatric }) {
+export default function HospitalList({ urgent, pediatric, primary }) {
   const [state, setState] = useState({ status: 'idle' });
 
   async function load() {
@@ -44,7 +44,7 @@ export default function HospitalList({ urgent, pediatric }) {
   if (state.status === 'idle' || state.status === 'error') {
     return (
       <div className="hospitals">
-        <button type="button" className="ghost" onClick={load}>
+        <button type="button" className={primary ? 'action' : 'ghost'} onClick={load}>
           {state.status === 'error' ? '다시 시도' : '가까운 응급실 찾기'}
         </button>
         {state.status === 'error' && <p className="note warn">{state.message}</p>}

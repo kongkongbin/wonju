@@ -27,8 +27,8 @@ export default function ClinicList({ pediatric, department }) {
 
   if (state.status === 'idle' || state.status === 'error') {
     return (
-      <div className="hospitals clinics">
-        <button type="button" className="ghost" onClick={load}>
+      <div className="hospitals">
+        <button type="button" className="action" onClick={load}>
           {state.status === 'error' ? '다시 시도' : '지금 진료 중인 병원 찾기'}
         </button>
         {state.status === 'error' && <p className="note warn">{state.message}</p>}
@@ -36,11 +36,11 @@ export default function ClinicList({ pediatric, department }) {
     );
   }
   if (state.status === 'loading') {
-    return <p className="hospitals clinics typing">지금 진료 중인 병원을 찾는 중입니다…</p>;
+    return <p className="hospitals typing">지금 진료 중인 병원을 찾는 중입니다…</p>;
   }
 
   return (
-    <div className="hospitals clinics">
+    <div className="hospitals">
       <p className="followups-title">지금 진료 중인 병·의원{pediatric && ' (소아청소년과)'}</p>
       {!state.pos && <p className="hint">위치를 받지 못해 원주시청 기준으로 보여 드립니다.</p>}
       {state.clinics.length === 0 ? (

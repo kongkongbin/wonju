@@ -1,17 +1,19 @@
+import { firstSentence, isMild } from '../lib/triage/spoken.js';
+import { canSpeak } from '../speak.js';
 import Call119Help from './Call119Help.jsx';
 import ClinicList from './ClinicList.jsx';
 import HospitalList from './HospitalList.jsx';
 
-const LEVEL_LABEL ={ 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
+const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
 
-/** KTAS 4~5 안내. 응급실을 막지는 않는다 (아래 응급실 목록은 그대로 보인다) */
+/** KTAS 4~5 안내. 응급실을 막지는 않는다 (아래 응급실 찾기는 그대로 보인다) */
 function MildCare({ pediatric, department }) {
   return (
-    <div className="mild-care">
-      <p className="followups-title">응급실이 아니어도 될 수 있습니다</p>
-      <ul>
+    <>
+      <ClinicList pediatric={pediatric} department={department} />
+      <ul className="mild-care">
         <li>
-          가까운 병·의원을 먼저 이용해 보세요. 더 많은 병원은{' '}
+          더 많은 병원은{' '}
           <a href="https://www.e-gen.or.kr/egen/search_hospital.do" target="_blank" rel="noreferrer">
             응급의료포털
           </a>
@@ -19,111 +21,150 @@ function MildCare({ pediatric, department }) {
         </li>
         {pediatric && (
           <li>
-            밤이나 휴일에는 아이를 위한 달빛어린이병원이 있습니다.{' '}
+            밤이나 휴일에는{' '}
             <a href="https://www.e-gen.or.kr/moonlight/main.do" target="_blank" rel="noreferrer">
-              달빛어린이병원 찾기
+              달빛어린이병원
             </a>
+            도 있습니다.
           </li>
         )}
         <li>증상이 나빠지거나 걱정되면 망설이지 말고 응급실이나 119에 연락하세요.</li>
       </ul>
-      <ClinicList pediatric={pediatric} department={department} />
+    </>
+  );
+}
+
+function Followups({ questions, onAnswer }) {
+  return (
+    <div className="chips">
+      {questions.map((q) => (
+        <button key={q} type="button" className="chip" onClick={() => onAnswer(q)}>
+          {q}
+        </button>
+      ))}
     </div>
   );
 }
 
 /**
- * 판정 결과 카드: 등급, 119 안내, 근거, 추가 질문
- * @param {{result: object, reported: string[], onAnswer: (question: string) => void, answerable: boolean}} props reported: 이 판정까지 사용자가 입력한 문장들
+ * 판정 결과 카드. 첫 화면에는 단계와 다음 행동만 두고 근거는 접어 둔다.
+ * @param {{result: object, reported: string[], onAnswer: (question: string) => void, answerable: boolean, onReplay: () => void}} props
+ *   reported: 이 판정까지 사용자가 입력한 문장들, onReplay: 음성 안내 다시 듣기
  */
-export default function ResultCard({ result, reported, onAnswer, answerable }) {
+export default function ResultCard({ result, reported, onAnswer, answerable, onReplay }) {
   const level = result.finalLevel;
+  const urgent = result.call119;
   const lowConfidence = result.confidence < 0.7;
   const pediatric = result.symptom.population === '소아';
-  // 판정이 확실하지 않으면 응급실이 필요 없다는 인상을 주지 않는다
-  const mild = level >= 4 && !result.call119 && !lowConfidence;
+  const mild = isMild(result);
+  const percent = Math.round(result.confidence * 100);
+  const questions = answerable ? result.missing_info_questions : [];
 
   return (
-    <div className="result">
-      {result.call119 && (
-        <div className="alert119" role="alert">
-          <strong>지금 119에 신고하세요.</strong>
-          <span>응급 가능성이 높습니다. 이 결과를 기다리지 말고 연락하세요.</span>
-          <a href="tel:119">119 전화하기</a>
+    <article className="result">
+      <header className={`verdict level-${level}`}>
+        <div>
+          <strong>
+            KTAS {level} · {LEVEL_LABEL[level]}
+          </strong>
+          <span>
+            {result.symptom.population} · {result.symptom.name}
+          </span>
         </div>
-      )}
-      {result.call119 && (
-        <Call119Help population={result.symptom.population} reported={reported} judgement={`KTAS ${level} · ${LEVEL_LABEL[level]}, ${result.symptom.name}`} />
-      )}
-
-      <div className="result-head">
-        <span className={`level level-${level}`}>
-          KTAS {level} · {LEVEL_LABEL[level]}
-        </span>
-        <span className="symptom">
-          {result.symptom.population} · {result.symptom.name}
-        </span>
-      </div>
-
-      {result.raisedBySafety && (
-        <p className="note warn">
-          안전 규칙으로 등급을 올렸습니다 ({result.safetyReasons.join(', ')}). AI 판단은 {result.llmLevel}단계였습니다.
-        </p>
-      )}
-
-      <p className="reason">{result.level_reason}</p>
-
-      <div className="meter" aria-label={`신뢰도 ${Math.round(result.confidence * 100)}%`}>
-        <div className="meter-bar" style={{ width: `${Math.round(result.confidence * 100)}%` }} />
-        <span>
-          신뢰도 {Math.round(result.confidence * 100)}%{lowConfidence && ' · 정보가 부족해 확정하기 어렵습니다'}
-        </span>
-      </div>
-
-      <dl className="facts">
-        <dt>추천 진료과</dt>
-        <dd>{result.suggested_department}</dd>
-        {result.matched_criteria.length > 0 && (
-          <>
-            <dt>적용한 KTAS 기준</dt>
-            <dd>
-              <ul>
-                {result.matched_criteria.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            </dd>
-          </>
+        {canSpeak && (
+          <button type="button" className="replay" onClick={onReplay}>
+            듣기
+          </button>
         )}
-      </dl>
+      </header>
 
-      {result.missing_info_questions.length > 0 && answerable && (
-        <div className="followups">
-          <p className="followups-title">더 정확한 판정을 위해 알려 주세요</p>
-          <div className="chips">
-            {result.missing_info_questions.map((q) => (
-              <button key={q} type="button" className="chip" onClick={() => onAnswer(q)}>
-                {q}
-              </button>
-            ))}
+      <div className="result-body">
+        {urgent ? (
+          <>
+            <div role="alert">
+              <p className="headline">지금 119에 신고하세요</p>
+              <p className="lead">응급 가능성이 높습니다. 이 결과를 기다리지 말고 연락하세요.</p>
+            </div>
+            <a className="action call-action" href="tel:119">
+              119 전화하기
+            </a>
+            <Call119Help population={result.symptom.population} reported={reported} judgement={`KTAS ${level} · ${LEVEL_LABEL[level]}, ${result.symptom.name}`} />
+          </>
+        ) : (
+          <div>
+            <p className="headline">{mild ? '응급실이 아니어도 될 수 있습니다' : level === 3 ? '빠른 진료가 필요해 보입니다' : '확실하지 않아 진료 확인을 권합니다'}</p>
+            <p className="lead">{firstSentence(result.level_reason)}</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {mild && <MildCare pediatric={pediatric} department={result.suggested_department} />}
+        {lowConfidence && <p className="note warn">정보가 부족해 확정하기 어렵습니다.</p>}
 
-      <HospitalList urgent={level <= 2} pediatric={pediatric} />
+        {!urgent && questions.length > 0 && (
+          <div>
+            <p className="followups-title">알려 주시면 더 정확해져요</p>
+            <Followups questions={questions} onAnswer={onAnswer} />
+          </div>
+        )}
 
-      <details className="candidates">
-        <summary>비슷한 후보 증상 보기</summary>
-        <ol>
-          {result.candidates.map((c) => (
-            <li key={c.id} className={c.id === result.symptom.id ? 'picked' : ''}>
-              {c.population} · {c.name}
-            </li>
-          ))}
-        </ol>
-      </details>
-    </div>
+        {mild && <MildCare pediatric={pediatric} department={result.suggested_department} />}
+
+        <HospitalList urgent={level <= 2} pediatric={pediatric} primary={!urgent && !mild} />
+
+        {urgent && questions.length > 0 && (
+          <details className="fold">
+            <summary>신고 후 더 알려 주실 수 있으면</summary>
+            <Followups questions={questions} onAnswer={onAnswer} />
+          </details>
+        )}
+
+        <details className="fold">
+          <summary>판정 근거 보기</summary>
+          <div className="fold-body">
+            {result.raisedBySafety && (
+              <p className="note warn">
+                안전 규칙으로 등급을 올렸습니다 ({result.safetyReasons.join(', ')}). AI 판단은 {result.llmLevel}단계였습니다.
+              </p>
+            )}
+            <p className="reason">{result.level_reason}</p>
+            <div className="meter" role="img" aria-label={`신뢰도 ${percent}%`}>
+              <div className="meter-bar" style={{ width: `${percent}%` }} />
+              <span>신뢰도 {percent}%</span>
+            </div>
+            <dl className="facts">
+              <dt>추천 진료과</dt>
+              <dd>{result.suggested_department}</dd>
+              {result.matched_criteria.length > 0 && (
+                <>
+                  <dt>적용한 KTAS 기준</dt>
+                  <dd>
+                    <ul>
+                      {result.matched_criteria.map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </>
+              )}
+              {result.candidates.length > 0 && (
+                <>
+                  <dt>비슷한 후보 증상</dt>
+                  <dd>
+                    <ol className="candidates">
+                      {result.candidates.map((c) => (
+                        <li key={c.id} className={c.id === result.symptom.id ? 'picked' : ''}>
+                          {c.population} · {c.name}
+                        </li>
+                      ))}
+                    </ol>
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </details>
+
+        <p className="hint">참고용 보조 도구이며 진단이 아닙니다.</p>
+      </div>
+    </article>
   );
 }

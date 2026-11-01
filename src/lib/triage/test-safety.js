@@ -1,3 +1,4 @@
+import { firstSentence, isMild, spokenSummary } from './spoken.js';
 import assert from 'node:assert/strict';
 import { safetyFloor, safetyText } from './safety.js';
 
@@ -19,3 +20,14 @@ assert.equal(floorOf([{ text: '아니요, 근데 입술이 파래요', question:
 assert.equal(floorOf([{ text: '사람이 쓰러져서 의식이 없어요' }]), 1);
 
 console.log('safety 검사 통과');
+
+// 음성 안내와 경증 판단: 위급하면 119를 말하고, 확실하지 않으면 응급실이 필요 없다고 말하지 않는다
+const said = (r) => spokenSummary({ confidence: 0.9, call119: false, ...r });
+if (!said({ finalLevel: 1, call119: true }).includes('119에 전화')) throw new Error('위급한데 119를 말하지 않음');
+if (said({ finalLevel: 4, call119: true }).includes('아니어도')) throw new Error('119 권고인데 경증 안내');
+if (!said({ finalLevel: 5 }).includes('아니어도')) throw new Error('경증 안내 누락');
+if (said({ finalLevel: 5, confidence: 0.5 }).includes('아니어도')) throw new Error('확실하지 않은데 경증 안내');
+if (isMild({ finalLevel: 3, call119: false, confidence: 0.9 })) throw new Error('KTAS 3을 경증으로 판단');
+if (firstSentence('체온은 38.5도입니다. 그 다음 문장.') !== '체온은 38.5도입니다.') throw new Error('첫 문장 자르기 실패');
+if (firstSentence('마침표가 없는 문장') !== '마침표가 없는 문장') throw new Error('마침표 없는 문장 처리 실패');
+console.log('음성 안내 검사 통과');
