@@ -68,14 +68,19 @@ export function detectPopulation(query) {
  * @returns {Promise<Array<{id:string, kind:string, population:string, name:string, levels?:string[], text:string, score:number}>>}
  */
 export async function retrieve(query, topK = 3, { kind = 'symptom', population = 'auto' } = {}) {
-  const { chunks, model } = await loadKb();
-  const q = await embed(query, 'query', model);
+  const { chunks } = await loadKb();
+  // 임베딩 API가 안 돼도 판정을 멈추지 않는다: 키워드 검색 순위만으로 후보를 고른다
+  const q = await embed(query).catch((e) => {
+    console.error('[retrieve] 임베딩 실패, 키워드 검색만 사용:', e.message);
+    return null;
+  });
   const lex = lexScores(query);
   const pop = population === 'auto' ? detectPopulation(query) : population === 'any' ? undefined : population;
   const ranked = chunks
-    .map(({ embedding, ...c }, i) => ({ ...c, score: dot(q, embedding), lex: lex[i] }))
+    .map(({ embedding, ...c }, i) => ({ ...c, score: q ? dot(q, embedding) : lex[i], lex: lex[i] }))
     .filter((c) => c.kind === kind && (!pop || c.population === pop))
     .sort((a, b) => b.score - a.score);
+  if (!q) return ranked.slice(0, topK);
 
   // 임베딩은 '경련'↔'발작'처럼 표현이 다르면 놓치고, 여러 증상이 섞인 문장에서는 한 증상(고열 등)에 끌려간다.
   // 그래서 끝자리 몇 개는 일상어 표현(aliases)과 글자가 겹치는 키워드 검색 상위 결과로 채운다.

@@ -1,9 +1,25 @@
-async function post(path, body) {
+// 배포판의 접근 코드. 저장은 편의일 뿐이라 막혀 있어도 이번 방문 동안은 메모리로 동작한다
+let accessCode = '';
+try {
+  accessCode = localStorage.getItem('accessCode') ?? '';
+} catch {}
+
+async function post(path, body, askCode = true) {
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-access-code': encodeURIComponent(accessCode) },
     body: JSON.stringify(body),
   });
+  if (res.status === 401 && askCode) {
+    const code = window.prompt('접근 코드를 입력하세요')?.trim();
+    if (code) {
+      accessCode = code;
+      try {
+        localStorage.setItem('accessCode', code);
+      } catch {}
+      return post(path, body, false);
+    }
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `요청 실패 (${res.status})`);
   return data;

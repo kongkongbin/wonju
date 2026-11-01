@@ -1,6 +1,8 @@
 node_modules/
-data/
+data/*
+!data/kb.json
 *.pptx
+.vercel/
 .env
 .env.*
 !.env.example

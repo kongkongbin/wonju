@@ -1,0 +1,7 @@
+{
+  "regions": ["icn1"],
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
+  "functions": {
+    "api/index.js": { "maxDuration": 60, "includeFiles": "data/kb.json" }
+  }
+}

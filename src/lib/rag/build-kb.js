@@ -19,7 +19,7 @@ for (const [i, c] of chunks.entries()) {
     if (!c.aliases) missing.push(c.name);
   }
   const input = c.aliases ? `${c.population} ${c.name}. ${c.aliases}. ${c.embedText}` : c.embedText;
-  c.embedding = await embed(input, 'passage', MODEL);
+  c.embedding = await embed(input);
   if ((i + 1) % 50 === 0 || i + 1 === chunks.length) console.log(`  ${i + 1}/${chunks.length}`);
 }
 if (missing.length) console.warn(`일상어 표현 없는 증상: ${[...new Set(missing)].join(', ')}`);

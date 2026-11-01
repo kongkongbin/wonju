@@ -1,7 +1,7 @@
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { triage } from '../src/lib/triage/triage.js';
 import { safetyText } from '../src/lib/triage/safety.js';
-import { retrieve } from '../src/lib/rag/retrieve.js';
 import { addressOf, nearbyHospitals, openClinics } from '../src/lib/hospital/nearby.js';
 
 const PORT = process.env.PORT ?? 3001;
@@ -13,6 +13,13 @@ const app = express();
 app.use(express.json({ limit: '50kb' }));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+// 배포 주소는 공개라서, 코드를 아는 사람만 Claude·공공데이터 호출을 쓰게 한다 (ACCESS_CODE가 없으면 검사하지 않는다)
+app.use('/api', (req, res, next) => {
+  const code = process.env.ACCESS_CODE;
+  if (!code || req.get('x-access-code') === encodeURIComponent(code)) return next();
+  res.status(401).json({ error: '접근 코드가 올바르지 않습니다.' });
+});
 
 /**
  * POST /api/triage
@@ -98,9 +105,9 @@ app.post('/api/address', async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`API 서버: http://localhost:${PORT}`);
-  // 첫 요청이 느리지 않도록 임베딩 모델을 미리 올려 둔다
-  await retrieve('워밍업', 1).catch((e) => console.error('워밍업 실패:', e.message));
-  console.log('임베딩 모델 준비 완료');
-});
+// Vercel에서는 api/index.js가 app을 가져다 쓴다. 직접 실행할 때만 포트를 연다
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => console.log(`API 서버: http://localhost:${PORT}`));
+}
+
+export default app;

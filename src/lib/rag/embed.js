@@ -1,25 +1,21 @@
-import { pipeline } from '@huggingface/transformers';
-
-export const DEFAULT_MODEL = process.env.EMBED_MODEL ?? 'Xenova/bge-m3';
-
-const extractors = new Map();
-
-async function getExtractor(model) {
-  if (!extractors.has(model)) extractors.set(model, pipeline('feature-extraction', model));
-  return extractors.get(model);
-}
+// bge-m3 임베딩을 Cloudflare Workers AI로 구한다. 모델이 2.2GB라 Vercel 함수(250MB)에 넣을 수 없어서 API를 쓴다.
+// 직접 돌린 Xenova/bge-m3와 코사인 0.999999로 같아서, 그 모델로 만든 data/kb.json을 그대로 쓸 수 있다.
+export const DEFAULT_MODEL = '@cf/baai/bge-m3';
 
 /**
- * E5 계열은 검색 대상 문서에 "passage: ", 질문에 "query: " 접두어를 붙여야 한다.
- * (bge-m3 등 다른 모델은 접두어 없이 사용)
  * @param {string} text
- * @param {'passage'|'query'} kind
- * @param {string} [model]
- * @returns {Promise<number[]>} 정규화된 벡터 (코사인 유사도 = 내적)
+ * @returns {Promise<number[]>} 정규화된 1024차원 벡터 (코사인 유사도 = 내적)
  */
-export async function embed(text, kind, model = DEFAULT_MODEL) {
-  const ext = await getExtractor(model);
-  const input = /e5/i.test(model) ? `${kind}: ${text}` : text;
-  const out = await ext(input, { pooling: model.includes('bge') ? 'cls' : 'mean', normalize: true });
-  return Array.from(out.data);
+export async function embed(text) {
+  const { CF_ACCOUNT_ID: account, CF_API_TOKEN: token } = process.env;
+  if (!account || !token) throw new Error('CF_ACCOUNT_ID, CF_API_TOKEN 이 없습니다 (.env 확인)');
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${DEFAULT_MODEL}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: [text] }),
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`임베딩 실패 (HTTP ${res.status})`);
+  const { result } = await res.json();
+  return result.data[0];
 }

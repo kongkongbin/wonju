@@ -34,3 +34,11 @@ for (const { input, expect } of cases) {
   );
 }
 console.log(`\nTop-1 적중: ${top1}/${cases.length}, Top-5 적중: ${top5}/${cases.length}`);
+
+// 임베딩 API가 안 되면 키워드 검색만으로 후보를 낸다
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () => new Response('', { status: 503 });
+const fallback = await retrieve('아이가 경기를 해요', 8);
+globalThis.fetch = realFetch;
+if (fallback.length !== 8 || !fallback.some((r) => isMatch(r, [['소아', '발작']]))) throw new Error('키워드 검색 대체 실패');
+console.log('키워드 검색 대체 통과');
