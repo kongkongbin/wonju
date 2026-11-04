@@ -73,7 +73,7 @@ export default function App() {
       setItems((prev) => [...prev, { role: 'bot', result }]);
       if (aloud) replyAloud(result);
     } catch (e) {
-      setItems((prev) => [...prev, { role: 'error', message: e.message }]);
+      setItems((prev) => [...prev, { role: 'error', message: `${e.message} 위급하면 바로 119에 전화하세요.` }]);
       if (aloud) say('판정하지 못했습니다. 위급하면 바로 119에 전화하세요.');
     } finally {
       setLoading(false);

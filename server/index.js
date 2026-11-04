@@ -106,8 +106,9 @@ app.post('/api/address', async (req, res) => {
 });
 
 // Vercel에서는 api/index.js가 app을 가져다 쓴다. 직접 실행할 때만 포트를 연다
+// 대회 서버는 포트가 바깥에 열려 있어서 HOST=127.0.0.1로 Caddy(HTTPS)를 통해서만 받는다
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  app.listen(PORT, () => console.log(`API 서버: http://localhost:${PORT}`));
+  app.listen(PORT, process.env.HOST, () => console.log(`API 서버: http://localhost:${PORT}`));
 }
 
 export default app;
