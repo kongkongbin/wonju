@@ -332,9 +332,11 @@ a {
   gap: 8px;
 }
 
+/* 실루엣이 세로로 길어서 높이에 맞춘다 */
 .figure svg {
-  width: min(62vw, 300px);
-  height: auto;
+  width: auto;
+  height: min(58vh, 560px);
+  max-width: 62vw;
   overflow: hidden;
 }
 
@@ -354,10 +356,11 @@ a {
   transition: transform 0.45s ease;
 }
 
+/* 실루엣 조각 사이를 배경색 선으로 띄워 부위가 나뉘어 보이게 한다 */
 .region {
-  fill: var(--border);
-  stroke: var(--muted);
-  stroke-width: 1;
+  fill: color-mix(in srgb, var(--muted) 35%, var(--border));
+  stroke: var(--bg);
+  stroke-width: 2;
   cursor: pointer;
   outline: none;
   transition: opacity 0.3s;
@@ -398,8 +401,13 @@ a {
   pointer-events: none;
 }
 
-.body-part.on .part-label {
+.part-label.on {
   fill: #fff;
+}
+
+/* 확대 중에는 다른 부위에서 고른 곳도 흐리게 둔다 */
+.zoomed .body-part[aria-hidden] {
+  opacity: 0.3;
 }
 
 .body-part.on {
