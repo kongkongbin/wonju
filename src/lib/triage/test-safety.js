@@ -51,9 +51,12 @@ const painCases = [
   [[['허리'], true], '아이가 허리가 아파요'],
   [[['온몸'], false], '온몸이 아파요'],
   [[[], true], ''],
+  // 통증 느낌·점수·시작 시점을 고르면 이어 붙인다 (KTAS 통증 구간을 그대로 쓴다)
+  [[['가슴'], false, { feel: '쥐어짜는 듯', score: '8~10', since: '방금' }], '가슴이 쥐어짜듯이 아파요. 통증은 10점 중 8~10점이에요. 방금 시작됐어요'],
+  [[['오른쪽 아랫배'], true, { since: '몇 시간 전부터' }], '아이가 오른쪽 아랫배가 아파요. 몇 시간 전부터 그래요'],
 ];
-for (const [[parts, child], expected] of painCases) {
-  const got = painSentence(parts, child);
+for (const [[parts, child, pain], expected] of painCases) {
+  const got = painSentence(parts, child, pain);
   if (got !== expected) throw new Error(`몸 그림 문장 오류: ${got} (기대: ${expected})`);
 }
 console.log('몸 그림 문장 검사 통과');

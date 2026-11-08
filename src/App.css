@@ -248,6 +248,19 @@ a {
   height: 20px;
 }
 
+.body-map-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-switch button {
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+
 .figure {
   display: flex;
   justify-content: center;
@@ -258,6 +271,12 @@ a {
 .figure svg {
   width: min(62vw, 260px);
   height: auto;
+  overflow: hidden;
+}
+
+/* 확대해도 선 굵기는 그대로 둔다 */
+.figure svg * {
+  vector-effect: non-scaling-stroke;
 }
 
 .figure-side {
@@ -267,16 +286,56 @@ a {
   white-space: nowrap;
 }
 
-.body-part {
+.zoomer {
+  transition: transform 0.45s ease;
+}
+
+.region {
   fill: var(--border);
   stroke: var(--muted);
   stroke-width: 1;
   cursor: pointer;
   outline: none;
+  transition: opacity 0.3s;
+}
+
+.region:hover {
+  fill: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.zoomed .region {
+  pointer-events: none;
+}
+
+.region.dim {
+  opacity: 0.15;
+}
+
+.body-part {
+  fill: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  cursor: pointer;
+  outline: none;
 }
 
 .body-part:hover {
-  fill: color-mix(in srgb, var(--primary) 30%, var(--border));
+  fill: color-mix(in srgb, var(--primary) 35%, var(--surface));
+}
+
+.body-part[aria-hidden] {
+  pointer-events: none;
+}
+
+.part-label {
+  fill: var(--text);
+  stroke: none;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.body-part.on .part-label {
+  fill: #fff;
 }
 
 .body-part.on {
@@ -284,9 +343,62 @@ a {
   stroke: var(--primary-fill);
 }
 
+.region:focus-visible,
 .body-part:focus-visible {
   stroke: var(--primary);
   stroke-width: 3;
+}
+
+/* 앞뒤를 바꿀 때 카드처럼 뒤집힌다 */
+.flip {
+  animation: flip-in 0.45s ease;
+}
+
+@keyframes flip-in {
+  from {
+    transform: perspective(700px) rotateY(80deg);
+    opacity: 0.2;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.pain-scale button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pain-scale .face {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pain-scale small {
+  font-size: 0.75rem;
+}
+
+.pain-scale button.on.pain-2 {
+  background: var(--l2);
+  border-color: var(--l2);
+}
+
+.pain-scale button.on.pain-3 {
+  background: var(--l1);
+  border-color: var(--l1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoomer {
+    transition: none;
+  }
+
+  .flip {
+    animation: none;
+  }
 }
 
 .chip.on {
