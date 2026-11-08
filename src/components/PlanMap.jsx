@@ -28,7 +28,13 @@ export default function PlanMap({ center, picks, others }) {
     });
 
     map.fitBounds(L.latLngBounds([me, ...picks.map((p) => [p.lat, p.lon])]), { padding: [28, 28], maxZoom: 15 });
-    return () => map.remove();
+    // 접혀 있던 카드를 펼치거나 화면 폭이 바뀌면 지도 크기를 다시 잰다 (안 하면 회색 칸이 남는다)
+    const resized = new ResizeObserver(() => map.invalidateSize());
+    resized.observe(ref.current);
+    return () => {
+      resized.disconnect();
+      map.remove();
+    };
   }, [center, picks, others]);
 
   return <div ref={ref} className="plan-map" role="img" aria-label="내 위치와 추천 병원을 표시한 지도" />;

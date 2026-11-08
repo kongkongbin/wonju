@@ -16,6 +16,14 @@
   --l3: #e6b800;
   --l4: #1f7f46;
   --l5: #2f6fab;
+  /* 모양: 모든 화면이 이 값만 쓴다 */
+  --font: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow: 0 4px 16px rgb(16 24 40 / 0.1);
   color-scheme: light dark;
 }
 
@@ -41,8 +49,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-family: var(--font);
   line-height: 1.55;
+  /* 한글을 단어 중간에서 끊지 않는다 (너무 긴 낱말만 끊는다) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 a {
@@ -110,7 +121,7 @@ a {
   gap: 4px;
   min-height: 40px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--danger-fill);
   color: #fff;
   font-weight: 700;
@@ -122,7 +133,7 @@ a {
   padding: 0 10px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 0.875rem;
   cursor: pointer;
@@ -143,7 +154,7 @@ a {
   min-height: 48px;
   padding: 12px 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--primary-fill);
   color: #fff;
   font-weight: 700;
@@ -181,59 +192,112 @@ a {
   line-height: 1.3;
 }
 
-.mic-hero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.intro {
+  margin: -8px 0 16px;
+  color: var(--muted);
+}
+
+/* 입력 방법 3가지. 말하기를 앞에 크게 두고, 넓은 화면에서는 같은 크기로 나란히 */
+.inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  width: 100%;
-  min-height: 72px;
-  padding: 12px 16px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--primary-fill);
-  color: #fff;
-  font-size: 1.125rem;
-  font-weight: 700;
+}
+
+.input-card {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 4px;
+  min-height: 96px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
 }
 
-.mic-hero.on {
+.input-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+
+.input-card strong {
+  font-size: 1.0625rem;
+}
+
+.input-card span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.input-card.primary {
+  grid-column: 1 / -1;
+  border-color: var(--primary-fill);
+  background: var(--primary-fill);
+  color: #fff;
+}
+
+.input-card.primary span {
+  color: rgb(255 255 255 / 0.85);
+}
+
+.input-card.primary.on {
+  border-color: var(--danger-fill);
   background: var(--danger-fill);
   animation: pulse 1.4s ease-in-out infinite;
+}
+
+@media (min-width: 600px) {
+  .inputs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .input-card.primary {
+    grid-column: auto;
+  }
 }
 
 .empty .hint {
   margin-top: 8px;
 }
 
-/* 몸 그림 */
-.body-map {
-  margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+/* 몸 그림: 전체 화면으로 열고, 위쪽 막대에 이전으로와 119를 둔다 */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  background: var(--bg);
+  animation: sheet-in 0.25s ease;
 }
 
-.body-map summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 12px;
-  font-weight: 600;
-  cursor: pointer;
+@keyframes sheet-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 
-.body-map summary::-webkit-details-marker {
-  display: none;
+.sheet-title {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .body-map-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 12px 12px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
 }
 
 .child-check {
@@ -269,7 +333,7 @@ a {
 }
 
 .figure svg {
-  width: min(62vw, 260px);
+  width: min(62vw, 300px);
   height: auto;
   overflow: hidden;
 }
@@ -396,7 +460,8 @@ a {
     transition: none;
   }
 
-  .flip {
+  .flip,
+  .sheet {
     animation: none;
   }
 }
@@ -412,7 +477,7 @@ a {
   padding: 8px 12px;
   background: var(--warn-bg);
   color: var(--warn);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
 }
 
@@ -439,7 +504,7 @@ a {
 
 .bubble {
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   max-width: 85%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -486,8 +551,21 @@ a {
 .result {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
+}
+
+/* 다시 판정하면 이전 카드는 단계 줄만 남긴다 */
+.result.folded .result-body {
+  display: none;
+}
+
+.result-cols,
+.result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .verdict {
@@ -535,7 +613,7 @@ a {
   padding: 0 10px;
   background: none;
   border: 1px solid currentColor;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -559,7 +637,7 @@ a {
 
 .scale li {
   padding: 2px 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   font-size: 0.875rem;
   text-align: center;
 }
@@ -609,7 +687,7 @@ a {
 .note.warn {
   margin: 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--warn-bg);
   color: var(--warn);
   font-size: 0.875rem;
@@ -618,7 +696,7 @@ a {
 .call-help {
   padding: 12px;
   border: 1px solid var(--danger);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .mild-care {
@@ -786,7 +864,7 @@ a {
 .meter {
   position: relative;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: var(--bg);
   overflow: hidden;
   font-size: 0.8125rem;
@@ -850,7 +928,7 @@ a {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
@@ -890,7 +968,7 @@ a {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
@@ -950,7 +1028,7 @@ a {
 .hospital {
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .hospital-head {
@@ -971,7 +1049,7 @@ a {
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--text);
   font-size: 0.875rem;
   font-weight: 600;
@@ -993,7 +1071,7 @@ a {
 .notices {
   margin-top: 8px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--warn-bg);
   color: var(--warn);
   font-size: 0.875rem;
@@ -1028,7 +1106,7 @@ a {
   padding: 0 8px;
   white-space: nowrap;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
 }
 
@@ -1055,7 +1133,7 @@ a {
   gap: 8px;
   margin-bottom: 8px;
   padding: 4px 4px 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   border: 1px solid var(--primary);
   font-size: 0.875rem;
@@ -1068,7 +1146,7 @@ a {
   padding: 0 14px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-weight: 600;
   cursor: pointer;
@@ -1130,7 +1208,7 @@ textarea {
   min-width: 0;
   resize: none;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -1141,7 +1219,7 @@ textarea {
   min-width: 48px;
   padding: 0 14px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--primary-fill);
   color: #fff;
   font-weight: 600;
@@ -1181,7 +1259,7 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mic-hero.on,
+  .input-card.primary.on,
   .row .mic.on,
   .typing {
     animation: none;
@@ -1230,7 +1308,7 @@ textarea {
   isolation: isolate;
   height: 220px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .pin {
@@ -1265,7 +1343,7 @@ textarea {
   position: relative;
   padding: 12px 12px 12px 52px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   counter-increment: step;
 }
 
@@ -1295,4 +1373,60 @@ textarea {
 
 .step-reason {
   margin: 4px 0;
+}
+
+/* 누르면 바로 반응한다 */
+button,
+.action,
+.chip,
+.input-card {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+}
+
+button:active:not(:disabled),
+a.action:active {
+  transform: scale(0.98);
+}
+
+/* 넓은 화면(PC·발표 화면): 결과는 왼쪽, 지도와 갈 곳은 오른쪽 */
+@media (min-width: 1024px) {
+  .app {
+    max-width: 1120px;
+  }
+
+  .empty,
+  .composer > * {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .result-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+
+  .result-side {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .action,
+  .chip,
+  .input-card {
+    transition: none;
+  }
+
+  button:active:not(:disabled),
+  a.action:active {
+    transform: none;
+  }
 }

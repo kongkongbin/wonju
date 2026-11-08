@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { requestTriage } from './api.js';
 import BodyMap from './components/BodyMap.jsx';
 import FollowupPanel from './components/FollowupPanel.jsx';
-import { MicIcon, PhoneIcon, StopIcon } from './components/icons.jsx';
+import { BodyIcon, MicIcon, PencilIcon, PhoneIcon, StopIcon } from './components/icons.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import { spokenSummary } from './lib/triage/spoken.js';
 import { canSpeak, speak, stopSpeaking, unlockSpeech } from './speak.js';
@@ -24,6 +24,7 @@ export default function App() {
   const [sendSoon, setSendSoon] = useState(false); // 말이 끝나서 곧 자동으로 보내는 중
   const [voiceUsed, setVoiceUsed] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [bodyOpen, setBodyOpen] = useState(false); // 몸 그림 화면
   const mutedRef = useRef(false);
   const turns = useRef([]); // 사용자가 보낸 입력들 { text, question? }. 음성 되묻기 콜백에서도 최신 값을 읽어야 해서 ref로 둔다
   const asked = useRef(false); // 음성 되묻기는 대화마다 한 번만 한다
@@ -37,14 +38,19 @@ export default function App() {
   const followups = useFollowups(speech, (answers) => judge(answers, true));
   const isEmpty = items.length === 0;
 
+  // 화면(몸 그림, 대화)마다 방문 기록을 하나씩 쌓아서, 폰의 뒤로가기가 앱을 닫지 않고 한 화면씩 돌아오게 한다.
+  // 기록의 screen 값이 지금 화면이다: 'body' 몸 그림, 'chat' 대화, 없으면 첫 화면
+  const onHistory = useRef(null);
+  onHistory.current = () => {
+    const screen = history.state?.screen;
+    setBodyOpen(screen === 'body');
+    if (screen !== 'chat' && screen !== 'body' && turns.current.length) reset();
+  };
   useEffect(() => {
-    // 대화를 시작하면 방문 기록을 하나 쌓는다. 폰의 뒤로가기가 앱을 닫지 않고 첫 화면으로 돌아오게 한다
-    if (isEmpty) return;
-    history.pushState({ chat: true }, '');
-    const onBack = () => reset();
-    window.addEventListener('popstate', onBack);
-    return () => window.removeEventListener('popstate', onBack);
-  }, [isEmpty]);
+    const handler = () => onHistory.current();
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
 
   useEffect(() => {
     // 판정이 나오면 카드의 맨 위(단계와 다음 행동)가 보이게 한다
@@ -74,6 +80,7 @@ export default function App() {
 
   async function judge(newTurns, aloud) {
     stopSpeaking();
+    if (!turns.current.length && history.state?.screen !== 'chat') history.pushState({ screen: 'chat' }, '');
     if (newTurns.some((t) => t.question)) rounds.current++;
     turns.current = [...turns.current, ...newTurns];
     setItems((prev) => [...prev, ...newTurns.map((t) => ({ role: 'user', ...t }))]);
@@ -122,6 +129,18 @@ export default function App() {
   function cancelSend() {
     setSendSoon(false);
     inputRef.current?.focus();
+  }
+
+  function openBody() {
+    history.pushState({ screen: 'body' }, '');
+    setBodyOpen(true);
+  }
+
+  /** 몸 그림에서 바로 판정: 몸 그림 기록을 대화 기록으로 바꿔서, 뒤로가기가 몸 그림이 아니라 첫 화면으로 가게 한다 */
+  function submitBody(sentence) {
+    history.replaceState({ screen: 'chat' }, '');
+    setBodyOpen(false);
+    send(sentence);
   }
 
   function toggleMuted() {
@@ -189,24 +208,26 @@ export default function App() {
         {isEmpty && (
           <section className="empty">
             <h2>어떤 증상이 있으신가요?</h2>
-            {speech.supported ? (
-              <>
-                <button type="button" className={speech.listening ? 'mic-hero on' : 'mic-hero'} onClick={toggleMic} disabled={loading} aria-pressed={speech.listening}>
+            <p className="intro">말하면 KTAS 기준 응급도와 지금 갈 병원까지 알려 드려요.</p>
+            <div className="inputs">
+              {speech.supported && (
+                <button type="button" className={speech.listening ? 'input-card primary on' : 'input-card primary'} onClick={toggleMic} disabled={loading} aria-pressed={speech.listening}>
                   {speech.listening ? <StopIcon size={26} /> : <MicIcon size={26} />}
-                  {speech.listening ? '듣고 있습니다. 말씀해 주세요' : '눌러서 말하기'}
+                  <strong>{speech.listening ? '듣고 있어요' : '말하기'}</strong>
+                  <span>{speech.listening ? '말이 끝나면 바로 판정해요' : '눌러서 증상을 말해 주세요'}</span>
                 </button>
-                <p className="hint">말이 끝나면 바로 판정합니다. 아래에 글로 적어도 됩니다.</p>
-              </>
-            ) : (
-              <p className="hint">일상적인 말로 편하게 적어 주세요.</p>
-            )}
-            <BodyMap
-              onChange={(sentence) => {
-                setSendSoon(false);
-                setDraft(sentence);
-              }}
-              onSubmit={send}
-            />
+              )}
+              <button type="button" className="input-card" onClick={() => inputRef.current?.focus()}>
+                <PencilIcon size={26} />
+                <strong>글로 쓰기</strong>
+                <span>아래 입력창에 적어요</span>
+              </button>
+              <button type="button" className="input-card" onClick={openBody}>
+                <BodyIcon size={26} />
+                <strong>아픈 곳 누르기</strong>
+                <span>몸 그림에서 골라요</span>
+              </button>
+            </div>
             <p className="disclaimer">
               참고용 보조 도구이며 진단이 아닙니다. 의식이 없거나 숨쉬기 힘들거나 심한 출혈이 있으면 바로 <a href="tel:119">119</a>에 연락하세요.
             </p>
@@ -242,6 +263,7 @@ export default function App() {
               <ResultCard
                 result={item.result}
                 reported={items.slice(0, i).filter((x) => x.role === 'user').map((x) => x.text)}
+                collapsed={i !== lastBotIndex}
                 onAnswers={(answers) => judge(answers, false)}
                 answerable={i === lastBotIndex && !loading && !followups.qa && rounds.current < MAX_FOLLOWUP_ROUNDS}
                 onReplay={() => speak(spokenSummary(item.result))}
@@ -305,6 +327,16 @@ export default function App() {
           </div>
         </form>
       )}
+
+      <BodyMap
+        open={bodyOpen}
+        onClose={() => history.back()}
+        onChange={(sentence) => {
+          setSendSoon(false);
+          setDraft(sentence);
+        }}
+        onSubmit={submitBody}
+      />
     </div>
   );
 }

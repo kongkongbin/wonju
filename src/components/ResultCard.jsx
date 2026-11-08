@@ -86,10 +86,12 @@ function FollowupCheck({ questions, onAnswers }) {
 
 /**
  * 판정 결과 카드. 첫 화면에는 단계와 다음 행동만 두고 근거는 접어 둔다.
- * @param {{result: object, reported: string[], onAnswers: (answers: {question: string, text: string}[]) => void, answerable: boolean, onReplay: () => void}} props
- *   reported: 이 판정까지 사용자가 입력한 문장들, onReplay: 음성 안내 다시 듣기
+ * @param {{result: object, reported: string[], onAnswers: (answers: {question: string, text: string}[]) => void, answerable: boolean, onReplay: () => void, collapsed: boolean}} props
+ *   reported: 이 판정까지 사용자가 입력한 문장들, onReplay: 음성 안내 다시 듣기, collapsed: 이전 판정이라 단계 줄만 보여 준다 (눌러서 펼친다)
  */
-export default function ResultCard({ result, reported, onAnswers, answerable, onReplay }) {
+export default function ResultCard({ result, reported, onAnswers, answerable, onReplay, collapsed }) {
+  const [expanded, setExpanded] = useState(false);
+  const folded = collapsed && !expanded;
   const level = result.finalLevel;
   const urgent = result.call119;
   const lowConfidence = result.confidence < 0.7;
@@ -100,20 +102,25 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
   const plan = (mode) => <Plan mode={mode} summary={summary} pediatric={pediatric} department={result.suggested_department} />;
 
   return (
-    <article className="result">
+    <article className={folded ? 'result folded' : 'result'}>
       <header className={`verdict level-${level}`}>
         <div>
           <strong>
-            KTAS {level} · {LEVEL_LABEL[level]}
+            {collapsed && '이전 · '}KTAS {level} · {LEVEL_LABEL[level]}
           </strong>
           <span>
             {result.symptom.population} · {result.symptom.name}
           </span>
         </div>
-        {canSpeak && (
+        {canSpeak && !folded && (
           <button type="button" className="replay" onClick={onReplay}>
             <SpeakerIcon size={18} />
             듣기
+          </button>
+        )}
+        {collapsed && (
+          <button type="button" className="replay" onClick={() => setExpanded(!expanded)} aria-expanded={!folded}>
+            {folded ? '펼치기' : '접기'}
           </button>
         )}
       </header>
@@ -152,31 +159,36 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
 
         {lowConfidence && <p className="note warn">정보가 부족해 확정하기 어렵습니다.</p>}
 
-        {/* KTAS 4~5는 신뢰도가 낮아도 병·의원을 먼저 보여 주고, 응급실은 "증상이 나빠지면"으로 붙인다 */}
-        {!urgent && plan(level >= 4 ? 'mild' : 'er')}
+        {/* 넓은 화면에서는 갈 곳(지도)을 오른쪽 칸에 둔다. 폰에서는 위에서부터 갈 곳 → 되묻기 → 판정 과정 순서 */}
+        <div className="result-cols">
+          {/* KTAS 4~5는 신뢰도가 낮아도 병·의원을 먼저 보여 주고, 응급실은 "증상이 나빠지면"으로 붙인다 */}
+          {!urgent && <div className="result-side">{plan(level >= 4 ? 'mild' : 'er')}</div>}
 
-        {!urgent && questions.length > 0 && (
-          <div>
-            <p className="followups-title">알려 주시면 더 정확해져요</p>
-            <FollowupCheck questions={questions} onAnswers={onAnswers} />
+          <div className="result-main">
+            {!urgent && questions.length > 0 && (
+              <div>
+                <p className="followups-title">알려 주시면 더 정확해져요</p>
+                <FollowupCheck questions={questions} onAnswers={onAnswers} />
+              </div>
+            )}
+
+            {mild && <MildCare pediatric={pediatric} />}
+
+            <HospitalList urgent={level <= 2} pediatric={pediatric} />
+
+            {urgent && questions.length > 0 && (
+              <details className="fold">
+                <summary>신고 후 더 알려 주실 수 있으면</summary>
+                <FollowupCheck questions={questions} onAnswers={onAnswers} />
+              </details>
+            )}
+
+            {/* AI가 하는 일이 보이게 펼쳐 둔다. 위급할 때는 119 안내를 가리지 않게 접어 둔다 */}
+            <TriageSteps result={result} reported={reported} open={!urgent} />
+
+            <p className="hint">참고용 보조 도구이며 진단이 아닙니다.</p>
           </div>
-        )}
-
-        {mild && <MildCare pediatric={pediatric} />}
-
-        <HospitalList urgent={level <= 2} pediatric={pediatric} />
-
-        {urgent && questions.length > 0 && (
-          <details className="fold">
-            <summary>신고 후 더 알려 주실 수 있으면</summary>
-            <FollowupCheck questions={questions} onAnswers={onAnswers} />
-          </details>
-        )}
-
-        {/* AI가 하는 일이 보이게 펼쳐 둔다. 위급할 때는 119 안내를 가리지 않게 접어 둔다 */}
-        <TriageSteps result={result} reported={reported} open={!urgent} />
-
-        <p className="hint">참고용 보조 도구이며 진단이 아닙니다.</p>
+        </div>
       </div>
     </article>
   );

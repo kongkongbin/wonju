@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PAIN_FEELS, PAIN_SCORES, PAIN_SINCE, painSentence } from '../lib/triage/body.js';
-import { BodyIcon } from './icons.jsx';
+import { PhoneIcon } from './icons.jsx';
 
 // 좌표는 viewBox 200×360 기준. 앞모습은 마주 본 모습이라 화면 왼쪽이 그 사람의 오른쪽, 뒷모습은 화면 왼쪽이 그 사람의 왼쪽이다
 const rect = (x, y, w, h, rx = 6) => ({ x, y, w, h, rx });
@@ -114,11 +114,24 @@ const pressable = (label, onPress, pressed) => ({
 
 /**
  * 말하기 어려울 때 아픈 곳을 눌러 고르는 그림. 고른 곳과 통증은 입력창의 문장이 되어 고치거나 말로 덧붙일 수 있다
- * @param {{onChange: (sentence: string) => void, onSubmit: (sentence: string) => void}} props
+ * 전체 화면으로 열고, 닫아도 고른 내용은 남는다
+ * @param {{open: boolean, onClose: () => void, onChange: (sentence: string) => void, onSubmit: (sentence: string) => void}} props onClose: 이전으로 (폰 뒤로가기와 같은 길)
  */
-export default function BodyMap({ onChange, onSubmit }) {
-  const [open, setOpen] = useState(false);
+export default function BodyMap({ open, onClose, onChange, onSubmit }) {
+  const backRef = useRef(null);
   const [view, setView] = useState('front');
+
+  useEffect(() => {
+    if (!open) return;
+    backRef.current?.focus();
+    document.body.style.overflow = 'hidden'; // 뒤의 첫 화면이 같이 스크롤되지 않게
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
   const [zoom, setZoom] = useState(null); // 확대한 큰 부위 id
   const [parts, setParts] = useState([]);
   const [child, setChild] = useState(false);
@@ -150,12 +163,22 @@ export default function BodyMap({ onChange, onSubmit }) {
     setView(next);
   }
 
+  if (!open) return null;
+
   return (
-    <details className="body-map" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary>
-        <BodyIcon />
-        말하기 어려우면 아픈 곳 고르기
-      </summary>
+    <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="body-map-title">
+      <header className="top">
+        <button ref={backRef} type="button" className="ghost back" onClick={onClose}>
+          ← 이전으로
+        </button>
+        <h2 id="body-map-title" className="sheet-title">
+          아픈 곳 고르기
+        </h2>
+        <a className="call" href="tel:119" aria-label="119에 전화하기">
+          <PhoneIcon size={18} />
+          119
+        </a>
+      </header>
       <div className="body-map-content">
         <div className="body-map-bar">
           <div className="seg view-switch" role="group" aria-label="몸 방향">
@@ -280,10 +303,7 @@ export default function BodyMap({ onChange, onSubmit }) {
         ) : (
           <p className="hint">그림이나 버튼을 눌러 주세요.</p>
         )}
-        <button type="button" className="ghost" onClick={() => setOpen(false)}>
-          접기
-        </button>
       </div>
-    </details>
+    </div>
   );
 }
