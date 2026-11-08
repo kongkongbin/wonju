@@ -10,7 +10,7 @@ const ResultSchema = z.object({
   level_reason: z.string(),
   matched_criteria: z.array(z.string()),
   suggested_department: z.string(),
-  missing_info_questions: z.array(z.string()).max(5),
+  missing_info_questions: z.array(z.object({ question: z.string(), options: z.array(z.string()) })).max(5),
   confidence: z.coerce.number().min(0).max(1),
   call_119: z.boolean(),
 });

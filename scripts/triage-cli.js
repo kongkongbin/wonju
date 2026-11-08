@@ -23,7 +23,7 @@ for (const input of inputs) {
     console.log(`인용 기준: ${r.matched_criteria.join(' / ') || '-'}`);
     console.log(`추천 진료과: ${r.suggested_department}`);
     if (r.missing_info_questions.length) {
-      console.log(`추가 질문: ${r.missing_info_questions.map((q, i) => `${i + 1}) ${q}`).join('  ')}`);
+      console.log(`추가 질문: ${r.missing_info_questions.map((q, i) => `${i + 1}) ${q.question} [${q.options.join('/')}]`).join('  ')}`);
     }
     console.log(`후보 Top-3: ${r.candidates.slice(0, 3).map((c) => `${c.population[0]}:${c.name}`).join(', ')}`);
     console.log(

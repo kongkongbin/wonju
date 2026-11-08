@@ -43,6 +43,9 @@ app.post('/api/triage', async (req, res) => {
   const input = messages.map((m) => (m.question ? `(질문: ${m.question}) 답변: ${m.text}` : m.text)).join('\n');
   try {
     const result = await triage(input, { safetyInput: safetyText(messages) });
+    // 프롬프트에도 적었지만, 이미 답한 질문이 같은 문장으로 다시 나오면 여기서 뺀다
+    const answered = new Set(messages.map((m) => m.question));
+    result.missing_info_questions = result.missing_info_questions.filter((q) => !answered.has(q.question));
     res.json(result);
   } catch (e) {
     console.error('[triage] 실패:', e.message);

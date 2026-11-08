@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { firstSentence, isMild } from '../lib/triage/spoken.js';
 import { canSpeak } from '../speak.js';
 import Call119Help from './Call119Help.jsx';
@@ -54,24 +55,41 @@ function LevelScale({ level }) {
   );
 }
 
-function Followups({ questions, onAnswer }) {
+const UNSURE = '잘 모르겠어요'; // 안전 규칙이 부정 답으로 보지 않아서, 질문에 든 위험 신호까지 검사한다
+
+/** 추가 질문은 답을 고르기만 하면 된다. 고른 답을 모아 한 번에 다시 판정한다 */
+function FollowupCheck({ questions, onAnswers }) {
+  const [picked, setPicked] = useState({});
+  const answers = questions.filter((q) => picked[q.question]).map((q) => ({ question: q.question, text: picked[q.question] }));
+  const pick = (question, option) => setPicked({ ...picked, [question]: picked[question] === option ? undefined : option });
+
   return (
-    <div className="chips">
-      {questions.map((q) => (
-        <button key={q} type="button" className="chip" onClick={() => onAnswer(q)}>
-          {q}
-        </button>
+    <div className="checklist">
+      {questions.map(({ question, options }) => (
+        <fieldset key={question} className="check-item">
+          <legend>{question}</legend>
+          <div className="seg">
+            {[...options.filter((o) => !/모름|모르/.test(o)).slice(0, 4), UNSURE].map((option) => (
+              <button key={option} type="button" className={picked[question] === option ? 'on' : ''} aria-pressed={picked[question] === option} onClick={() => pick(question, option)}>
+                {option === UNSURE ? '모름' : option}
+              </button>
+            ))}
+          </div>
+        </fieldset>
       ))}
+      <button type="button" className="action" disabled={!answers.length} onClick={() => onAnswers(answers)}>
+        {answers.length ? `고른 답 ${answers.length}개로 다시 판정` : '해당하는 답을 골라 주세요'}
+      </button>
     </div>
   );
 }
 
 /**
  * 판정 결과 카드. 첫 화면에는 단계와 다음 행동만 두고 근거는 접어 둔다.
- * @param {{result: object, reported: string[], onAnswer: (question: string) => void, answerable: boolean, onReplay: () => void}} props
+ * @param {{result: object, reported: string[], onAnswers: (answers: {question: string, text: string}[]) => void, answerable: boolean, onReplay: () => void}} props
  *   reported: 이 판정까지 사용자가 입력한 문장들, onReplay: 음성 안내 다시 듣기
  */
-export default function ResultCard({ result, reported, onAnswer, answerable, onReplay }) {
+export default function ResultCard({ result, reported, onAnswers, answerable, onReplay }) {
   const level = result.finalLevel;
   const urgent = result.call119;
   const lowConfidence = result.confidence < 0.7;
@@ -125,7 +143,7 @@ export default function ResultCard({ result, reported, onAnswer, answerable, onR
         {!urgent && questions.length > 0 && (
           <div>
             <p className="followups-title">알려 주시면 더 정확해져요</p>
-            <Followups questions={questions} onAnswer={onAnswer} />
+            <FollowupCheck questions={questions} onAnswers={onAnswers} />
           </div>
         )}
 
@@ -136,7 +154,7 @@ export default function ResultCard({ result, reported, onAnswer, answerable, onR
         {urgent && questions.length > 0 && (
           <details className="fold">
             <summary>신고 후 더 알려 주실 수 있으면</summary>
-            <Followups questions={questions} onAnswer={onAnswer} />
+            <FollowupCheck questions={questions} onAnswers={onAnswers} />
           </details>
         )}
 

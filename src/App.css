@@ -152,9 +152,18 @@ a {
   cursor: pointer;
 }
 
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .call-action {
   background: var(--danger-fill);
   font-size: 1.125rem;
+}
+
+.back {
+  font-weight: 600;
 }
 
 .chat {
@@ -616,6 +625,49 @@ a {
   border-color: var(--primary);
 }
 
+/* 추가 질문: 답을 고르기만 한다 */
+.checklist {
+  display: grid;
+  gap: 14px;
+}
+
+.check-item {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.check-item legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.9375rem;
+}
+
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seg button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.seg button.on {
+  background: var(--primary-fill);
+  border-color: var(--primary-fill);
+  color: #fff;
+  font-weight: 700;
+}
+
 .hint {
   margin: 0;
   color: var(--muted);
@@ -759,30 +811,6 @@ a {
 
 .composer .note {
   margin-bottom: 8px;
-}
-
-.replying {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding: 4px 4px 4px 12px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--primary);
-  font-size: 0.875rem;
-}
-
-.replying button {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  background: none;
-  border: 0;
-  color: var(--muted);
-  font-size: 1.25rem;
-  cursor: pointer;
 }
 
 /* 말이 끝난 뒤 자동 전송까지 남은 시간 */
