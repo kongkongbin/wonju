@@ -2,7 +2,8 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { triage } from '../src/lib/triage/triage.js';
 import { safetyText } from '../src/lib/triage/safety.js';
-import { addressOf, nearbyHospitals, openClinics } from '../src/lib/hospital/nearby.js';
+import { addressOf, nearbyHospitals } from '../src/lib/hospital/nearby.js';
+import { makePlan } from '../src/lib/hospital/plan.js';
 
 const PORT = process.env.PORT ?? 3001;
 const MAX_MESSAGES = 10;
@@ -71,21 +72,24 @@ app.post('/api/hospitals', async (req, res) => {
   }
 });
 
+const PLAN_MODES = ['urgent', 'er', 'mild'];
+
 /**
- * POST /api/clinics
- * body: { lat: number, lon: number, pediatric: boolean, department: string }  department: 판정이 추천한 진료과
- * 지금 진료 중인 가까운 병·의원을 돌려준다.
+ * POST /api/plan
+ * body: { lat, lon, mode: 'urgent'|'er'|'mild', patient: string, pediatric: boolean, department: string }
+ *   patient: 판정 요약 (단계, 증상, 근거), department: 판정이 추천한 진료과
+ * 판정 뒤 갈 곳 1·2·3을 돌려준다 (src/lib/hospital/plan.js makePlan).
  */
-app.post('/api/clinics', async (req, res) => {
-  const { lat, lon, pediatric, department } = req.body ?? {};
-  if (!validCoords(lat, lon)) {
-    return res.status(400).json({ error: 'lat, lon 은 위도·경도 숫자여야 합니다.' });
+app.post('/api/plan', async (req, res) => {
+  const { lat, lon, mode, patient, pediatric, department } = req.body ?? {};
+  if (!validCoords(lat, lon) || !PLAN_MODES.includes(mode)) {
+    return res.status(400).json({ error: 'lat, lon 은 위도·경도 숫자, mode 는 urgent·er·mild 중 하나여야 합니다.' });
   }
-  const patient = { pediatric: pediatric === true, department: String(department ?? '').slice(0, MAX_LENGTH) };
+  const clip = (s) => String(s ?? '').slice(0, MAX_LENGTH);
   try {
-    res.json({ clinics: await openClinics(lat, lon, patient) });
+    res.json(await makePlan({ mode, lat, lon, patient: clip(patient), pediatric: pediatric === true, department: clip(department) }));
   } catch (e) {
-    console.error('[clinics] 실패:', e.message);
+    console.error('[plan] 실패:', e.message);
     res.status(502).json({ error: '병원 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' });
   }
 });

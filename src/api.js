@@ -41,14 +41,11 @@ export const requestTriage = (messages) => post('/api/triage', { messages });
 export const requestHospitals = (lat, lon) => post('/api/hospitals', { lat, lon });
 
 /**
- * 지금 진료 중인 가까운 병·의원을 요청한다.
- * @param {number} lat
- * @param {number} lon
- * @param {boolean} pediatric 소아 판정 여부
- * @param {string} department 판정이 추천한 진료과
- * @returns {Promise<{clinics: object[]}>} 서버 openClinics() 반환값
+ * 판정 뒤 갈 곳 1·2·3을 요청한다.
+ * @param {{lat: number, lon: number, mode: 'urgent'|'er'|'mild', patient: string, pediatric: boolean, department: string}} body
+ * @returns {Promise<object>} 서버 makePlan() 반환값
  */
-export const requestClinics = (lat, lon, pediatric, department) => post('/api/clinics', { lat, lon, pediatric, department });
+export const requestPlan = (body) => post('/api/plan', body);
 
 /**
  * 위치의 주소를 요청한다.

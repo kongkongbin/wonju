@@ -2,17 +2,16 @@ import { useState } from 'react';
 import { firstSentence, isMild } from '../lib/triage/spoken.js';
 import { canSpeak } from '../speak.js';
 import Call119Help from './Call119Help.jsx';
-import ClinicList from './ClinicList.jsx';
 import HospitalList from './HospitalList.jsx';
 import { PhoneIcon, SpeakerIcon } from './icons.jsx';
+import Plan from './Plan.jsx';
 
 const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
 
 /** KTAS 4~5 안내. 응급실을 막지는 않는다 (아래 응급실 찾기는 그대로 보인다) */
-function MildCare({ pediatric, department }) {
+function MildCare({ pediatric }) {
   return (
     <>
-      <ClinicList pediatric={pediatric} department={department} />
       <ul className="mild-care">
         <li>
           더 많은 병원은{' '}
@@ -97,6 +96,8 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
   const mild = isMild(result);
   const percent = Math.round(result.confidence * 100);
   const questions = answerable ? result.missing_info_questions : [];
+  const summary = `KTAS ${level} (${LEVEL_LABEL[level]}), ${result.symptom.population}, 증상: ${result.symptom.name}, 추천 진료과: ${result.suggested_department}, 판정 근거: ${result.level_reason}`;
+  const plan = (mode) => <Plan mode={mode} summary={summary} pediatric={pediatric} department={result.suggested_department} />;
 
   return (
     <article className="result">
@@ -125,11 +126,22 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
               <p className="headline">지금 119에 신고하세요</p>
               <p className="lead">응급 가능성이 높습니다. 이 결과를 기다리지 말고 연락하세요.</p>
             </div>
-            <a className="action call-action" href="tel:119">
-              <PhoneIcon size={22} />
-              119 전화하기
-            </a>
-            <Call119Help population={result.symptom.population} reported={reported} judgement={`KTAS ${level} · ${LEVEL_LABEL[level]}, ${result.symptom.name}`} />
+            <ol className="steps">
+              <li className="step">
+                <p className="step-title">119에 전화하세요</p>
+                <a className="action call-action" href="tel:119">
+                  <PhoneIcon size={22} />
+                  119 전화하기
+                </a>
+              </li>
+              <li className="step">
+                <Call119Help population={result.symptom.population} reported={reported} judgement={`KTAS ${level} · ${LEVEL_LABEL[level]}, ${result.symptom.name}`} />
+              </li>
+              <li className="step">
+                <p className="step-title">가까운 응급실</p>
+                {plan('urgent')}
+              </li>
+            </ol>
           </>
         ) : (
           <div>
@@ -140,6 +152,9 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
 
         {lowConfidence && <p className="note warn">정보가 부족해 확정하기 어렵습니다.</p>}
 
+        {/* KTAS 4~5는 신뢰도가 낮아도 병·의원을 먼저 보여 주고, 응급실은 "증상이 나빠지면"으로 붙인다 */}
+        {!urgent && plan(level >= 4 ? 'mild' : 'er')}
+
         {!urgent && questions.length > 0 && (
           <div>
             <p className="followups-title">알려 주시면 더 정확해져요</p>
@@ -147,9 +162,9 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
           </div>
         )}
 
-        {mild && <MildCare pediatric={pediatric} department={result.suggested_department} />}
+        {mild && <MildCare pediatric={pediatric} />}
 
-        <HospitalList urgent={level <= 2} pediatric={pediatric} primary={!urgent && !mild} />
+        <HospitalList urgent={level <= 2} pediatric={pediatric} />
 
         {urgent && questions.length > 0 && (
           <details className="fold">
