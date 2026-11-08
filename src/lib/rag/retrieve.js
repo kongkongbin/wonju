@@ -62,6 +62,15 @@ export function detectPopulation(query) {
 }
 
 /**
+ * 검색 대상이 된 증상 기준 수 (화면의 "N개 중 8개")
+ * @param {'소아'|'성인'|undefined} population 모르면 소아·성인 전체
+ */
+export async function symptomCount(population) {
+  const { chunks } = await loadKb();
+  return chunks.filter((c) => c.kind === 'symptom' && (!population || c.population === population)).length;
+}
+
+/**
  * @param {string} query 사용자 증상 입력
  * @param {number} [topK]
  * @param {{kind?: 'symptom'|'common', population?: '소아'|'성인'|'auto'|'any'}} [opts] 기본은 증상 청크만, 소아/성인은 문장에서 자동 추정

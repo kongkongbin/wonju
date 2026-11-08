@@ -651,15 +651,136 @@ a {
   display: none;
 }
 
-.fold-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 4px;
-}
-
 .reason {
   margin: 0;
+}
+
+/* AI가 판정한 과정 (TriageSteps.jsx): 번호와 세로선으로 단계를 잇는다 */
+.process summary {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.process-steps {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 0;
+  padding: 0 0 0 30px;
+  list-style: none;
+  counter-reset: process;
+}
+
+.process-steps::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 10px;
+  width: 2px;
+  background: var(--border);
+}
+
+.process-steps > li {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  counter-increment: process;
+}
+
+.process-steps > li::before {
+  content: counter(process);
+  position: absolute;
+  top: 0;
+  left: -30px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.process-steps > li.final::before {
+  background: var(--primary-fill);
+  color: #fff;
+}
+
+.process-steps p {
+  margin: 0;
+}
+
+.process-title {
+  font-weight: 600;
+}
+
+.process-steps .candidates {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.process-steps .candidates .picked {
+  color: var(--text);
+}
+
+.process-steps .candidates .picked::after {
+  content: ' ← AI가 고름';
+  color: var(--primary);
+}
+
+.criteria {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--primary);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg);
+  font-size: 0.875rem;
+  list-style: none;
+}
+
+.process[open] .process-steps > li {
+  animation: rise 0.4s both;
+}
+
+.process[open] .process-steps > li:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.process[open] .process-steps > li:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.process[open] .process-steps > li:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.process[open] .process-steps > li:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process[open] .process-steps > li {
+    animation: none;
+  }
 }
 
 .meter {

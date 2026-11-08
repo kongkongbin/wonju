@@ -5,6 +5,7 @@ import Call119Help from './Call119Help.jsx';
 import HospitalList from './HospitalList.jsx';
 import { PhoneIcon, SpeakerIcon } from './icons.jsx';
 import Plan from './Plan.jsx';
+import TriageSteps from './TriageSteps.jsx';
 
 const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
 
@@ -94,7 +95,6 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
   const lowConfidence = result.confidence < 0.7;
   const pediatric = result.symptom.population === '소아';
   const mild = isMild(result);
-  const percent = Math.round(result.confidence * 100);
   const questions = answerable ? result.missing_info_questions : [];
   const summary = `KTAS ${level} (${LEVEL_LABEL[level]}), ${result.symptom.population}, 증상: ${result.symptom.name}, 추천 진료과: ${result.suggested_department}, 판정 근거: ${result.level_reason}`;
   const plan = (mode) => <Plan mode={mode} summary={summary} pediatric={pediatric} department={result.suggested_department} />;
@@ -173,51 +173,8 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
           </details>
         )}
 
-        <details className="fold">
-          <summary>판정 근거 보기</summary>
-          <div className="fold-body">
-            {result.raisedBySafety && (
-              <p className="note warn">
-                안전 규칙으로 등급을 올렸습니다 ({result.safetyReasons.join(', ')}). AI 판단은 {result.llmLevel}단계였습니다.
-              </p>
-            )}
-            <p className="reason">{result.level_reason}</p>
-            <div className="meter" role="img" aria-label={`신뢰도 ${percent}%`}>
-              <div className="meter-bar" style={{ width: `${percent}%` }} />
-              <span>신뢰도 {percent}%</span>
-            </div>
-            <dl className="facts">
-              <dt>추천 진료과</dt>
-              <dd>{result.suggested_department}</dd>
-              {result.matched_criteria.length > 0 && (
-                <>
-                  <dt>적용한 KTAS 기준</dt>
-                  <dd>
-                    <ul>
-                      {result.matched_criteria.map((c) => (
-                        <li key={c}>{c}</li>
-                      ))}
-                    </ul>
-                  </dd>
-                </>
-              )}
-              {result.candidates.length > 0 && (
-                <>
-                  <dt>비슷한 후보 증상</dt>
-                  <dd>
-                    <ol className="candidates">
-                      {result.candidates.map((c) => (
-                        <li key={c.id} className={c.id === result.symptom.id ? 'picked' : ''}>
-                          {c.population} · {c.name}
-                        </li>
-                      ))}
-                    </ol>
-                  </dd>
-                </>
-              )}
-            </dl>
-          </div>
-        </details>
+        {/* AI가 하는 일이 보이게 펼쳐 둔다. 위급할 때는 119 안내를 가리지 않게 접어 둔다 */}
+        <TriageSteps result={result} reported={reported} open={!urgent} />
 
         <p className="hint">참고용 보조 도구이며 진단이 아닙니다.</p>
       </div>

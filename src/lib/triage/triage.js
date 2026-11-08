@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { retrieve } from '../rag/retrieve.js';
+import { detectPopulation, retrieve, symptomCount } from '../rag/retrieve.js';
 import { generateJson } from '../llm/claude.js';
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompt.js';
 import { safetyFloor } from './safety.js';
@@ -38,6 +38,10 @@ export async function triage(input, { topK = 8, model, safetyInput = input } = {
   const raised = safety.floor !== null && parsed.ktas_level > safety.floor;
   const finalLevel = raised ? safety.floor : parsed.ktas_level;
 
+  // 화면의 "판정 과정"에 쓴다: 어느 기준 몇 개 중에서 후보를 골랐는가 (retrieve와 같은 방법으로 소아/성인을 추정)
+  const population = detectPopulation(input);
+  const search = { population: population ?? null, total: await symptomCount(population) };
+
   return {
     input,
     symptom: { id: chosen.id, name: chosen.name, population: chosen.population },
@@ -48,6 +52,7 @@ export async function triage(input, { topK = 8, model, safetyInput = input } = {
     ...parsed,
     call119: parsed.call_119 || finalLevel <= 2,
     candidates: candidates.map((c) => ({ id: c.id, name: c.name, population: c.population, score: c.score })),
+    search,
     usage,
     model: usedModel,
   };
