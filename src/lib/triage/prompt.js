@@ -18,28 +18,3 @@ export function buildUserPrompt(input, candidates) {
     .join('\n\n');
   return `## 환자 입력\n${input}\n\n## 후보 증상 (KTAS 원문)\n${list}`;
 }
-
-/** Gemini responseSchema (OpenAPI 부분집합) */
-export const RESPONSE_SCHEMA = {
-  type: 'OBJECT',
-  properties: {
-    selected_chunk_id: { type: 'STRING', description: '선택한 후보의 id' },
-    ktas_level: { type: 'INTEGER', description: '1~5' },
-    level_reason: { type: 'STRING' },
-    matched_criteria: { type: 'ARRAY', items: { type: 'STRING' } },
-    suggested_department: { type: 'STRING' },
-    missing_info_questions: { type: 'ARRAY', items: { type: 'STRING' } },
-    confidence: { type: 'NUMBER', description: '0~1' },
-    call_119: { type: 'BOOLEAN' },
-  },
-  required: [
-    'selected_chunk_id',
-    'ktas_level',
-    'level_reason',
-    'matched_criteria',
-    'suggested_department',
-    'missing_info_questions',
-    'confidence',
-    'call_119',
-  ],
-};
