@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { firstSentence, isMild } from '../lib/triage/spoken.js';
+import { DEMO } from '../demo/incident.js';
+import { LEVEL_LABEL, firstSentence, isMild, planSummary } from '../lib/triage/spoken.js';
 import { canSpeak } from '../speak.js';
+import AutoReport from '../demo/AutoReport.jsx';
 import Call119Help from './Call119Help.jsx';
 import HospitalList from './HospitalList.jsx';
 import { PhoneIcon, SpeakerIcon } from './icons.jsx';
 import Plan from './Plan.jsx';
 import TriageSteps from './TriageSteps.jsx';
-
-const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
 
 /** KTAS 4~5 안내. 응급실을 막지는 않는다 (아래 응급실 찾기는 그대로 보인다) */
 function MildCare({ pediatric }) {
@@ -98,8 +98,7 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
   const pediatric = result.symptom.population === '소아';
   const mild = isMild(result);
   const questions = answerable ? result.missing_info_questions : [];
-  const summary = `KTAS ${level} (${LEVEL_LABEL[level]}), ${result.symptom.population}, 증상: ${result.symptom.name}, 추천 진료과: ${result.suggested_department}, 판정 근거: ${result.level_reason}`;
-  const plan = (mode) => <Plan mode={mode} summary={summary} pediatric={pediatric} department={result.suggested_department} />;
+  const plan = (mode) => <Plan mode={mode} summary={planSummary(result)} pediatric={pediatric} department={result.suggested_department} />;
 
   return (
     <article className={folded ? 'result folded' : 'result'}>
@@ -133,6 +132,10 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
               <p className="headline">지금 119에 신고하세요</p>
               <p className="lead">응급 가능성이 높습니다. 이 결과를 기다리지 말고 연락하세요.</p>
             </div>
+            {/* 시연 모드의 마지막 판정은 자동 신고와 병원 수용 요청을 흉내 낸다. 이전 판정은 평소 안내 그대로 */}
+            {DEMO && !collapsed ? (
+              <AutoReport />
+            ) : (
             <ol className="steps">
               <li className="step">
                 <p className="step-title">119에 전화하세요</p>
@@ -149,6 +152,7 @@ export default function ResultCard({ result, reported, onAnswers, answerable, on
                 {plan('urgent')}
               </li>
             </ol>
+            )}
           </>
         ) : (
           <div>

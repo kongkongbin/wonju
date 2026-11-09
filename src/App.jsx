@@ -5,15 +5,24 @@ import FollowupPanel from './components/FollowupPanel.jsx';
 import { BodyIcon, MicIcon, PencilIcon, PhoneIcon, StopIcon } from './components/icons.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import { spokenSummary } from './lib/triage/spoken.js';
+import DemoShell from './demo/DemoShell.jsx';
+import { DEMO, resetIncident, startIncident } from './demo/incident.js';
 import { canSpeak, speak, stopSpeaking, unlockSpeech } from './speak.js';
 import { useFollowups } from './useFollowups.js';
 import { useSpeech } from './useSpeech.js';
 
-const EXAMPLES = [
-  '아이가 40도 고열에 경련을 일으키고 입술이 파래져요',
-  '점심 먹고부터 속이 더부룩하고 배가 가끔 찌릿해요',
-  '왼쪽 머리가 가끔 찌릿한 느낌이 있어요',
-];
+const EXAMPLES = DEMO
+  ? [
+      '아버지(60대)가 30분 전부터 가슴이 쥐어짜듯 아프고 식은땀을 흘리세요. 왼팔도 저리대요',
+      '어머니(70대)가 1시간 전부터 말이 어눌하고 오른쪽 팔다리에 힘이 없어요',
+      '남편(50대)이 갑자기 쓰러졌는데 불러도 대답이 없어요',
+      '점심 먹고부터 배가 살살 아파요. 통증은 2점 정도예요',
+    ]
+  : [
+      '아이가 40도 고열에 경련을 일으키고 입술이 파래져요',
+      '점심 먹고부터 속이 더부룩하고 배가 가끔 찌릿해요',
+      '왼쪽 머리가 가끔 찌릿한 느낌이 있어요',
+    ];
 const SEND_DELAY_MS = 2000; // 말이 끝나고 보내기까지 잘못 들은 말을 취소할 시간 (App.css .sending-bar와 맞춘다)
 const MAX_FOLLOWUP_ROUNDS = 2; // 되묻기가 끝없이 이어지지 않게 두 번까지만 묻는다
 
@@ -91,6 +100,7 @@ export default function App() {
     try {
       const result = await requestTriage(turns.current);
       if (id !== convo.current) return;
+      if (DEMO && result.call119) startIncident(result, turns.current.map((t) => t.text));
       setItems((prev) => [...prev, { role: 'bot', result }]);
       if (aloud) replyAloud(result);
     } catch (e) {
@@ -159,6 +169,7 @@ export default function App() {
     rounds.current = 0;
     convo.current++;
     turns.current = [];
+    resetIncident();
     setSendSoon(false);
     setLoading(false);
     setItems([]);
@@ -180,7 +191,7 @@ export default function App() {
   // 가장 마지막 판정 결과에 대해서만 추가 질문 버튼을 보여 준다
   const lastBotIndex = items.map((i) => i.role).lastIndexOf('bot');
 
-  return (
+  const app = (
     <div className="app">
       <header className="top">
         {isEmpty ? (
@@ -231,7 +242,7 @@ export default function App() {
             <p className="disclaimer">
               참고용 보조 도구이며 진단이 아닙니다. 의식이 없거나 숨쉬기 힘들거나 심한 출혈이 있으면 바로 <a href="tel:119">119</a>에 연락하세요.
             </p>
-            <p className="followups-title">이렇게 말해 보세요</p>
+            <p className="followups-title">{DEMO ? '시연 시나리오' : '이렇게 말해 보세요'}</p>
             <div className="chips">
               {EXAMPLES.map((ex) => (
                 <button key={ex} type="button" className="chip" onClick={() => send(ex)}>
@@ -339,4 +350,5 @@ export default function App() {
       />
     </div>
   );
+  return DEMO ? <DemoShell>{app}</DemoShell> : app;
 }

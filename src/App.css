@@ -10,6 +10,7 @@
   --danger-fill: #d92d20;
   --warn-bg: #fffaeb;
   --warn: #b54708;
+  --ok: #067647;
   /* 단계 색은 흰 글자와의 대비 4.5:1 이상 (3단계만 어두운 글자) */
   --l1: #d92d20;
   --l2: #c2540a;
@@ -38,6 +39,7 @@
     --danger: #f97066;
     --warn-bg: #33270f;
     --warn: #f5b25a;
+    --ok: #75e0a7;
   }
 }
 
@@ -1436,5 +1438,428 @@ a.action:active {
   button:active:not(:disabled),
   a.action:active {
     transform: none;
+  }
+}
+
+/* ── 시연 모드 (?demo): 시민 앱 · 119 상황실 · 병원 응급실 ──
+   화면 전체 높이를 쓰고 칸마다 따로 스크롤한다 (시민 앱의 위쪽 막대와 입력창은 칸 안에서 붙어 있다) */
+.demo {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 6px 16px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.demo-bar p {
+  margin: 0;
+}
+
+.demo-bar a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.demo-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.demo-tabs button {
+  position: relative;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.demo-tabs button[aria-selected='true'] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.demo-tabs .dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger-fill);
+}
+
+.demo-panes {
+  flex: 1;
+  min-height: 0;
+}
+
+.pane {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.pane .app {
+  min-height: 100%;
+}
+
+@media (max-width: 1199px) {
+  .demo[data-tab='citizen'] .pane:not(.pane-citizen),
+  .demo[data-tab='ops'] .pane:not(.pane-ops),
+  .demo[data-tab='er'] .pane:not(.pane-er) {
+    display: none;
+  }
+}
+
+/* 발표 화면: 시민 앱은 폰 폭으로 왼쪽에, 상황실과 병원은 오른쪽에 나란히 */
+@media (min-width: 1200px) {
+  .demo-tabs {
+    display: none;
+  }
+
+  .demo-panes {
+    display: grid;
+    grid-template-columns: minmax(380px, 440px) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .pane + .pane {
+    border-left: 1px solid var(--border);
+  }
+
+  .pane-citizen .app {
+    max-width: none;
+  }
+
+  .pane-citizen .result-cols {
+    display: block;
+  }
+
+  .pane-citizen .inputs {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pane-citizen .input-card.primary {
+    grid-column: 1 / -1;
+  }
+}
+
+.desk {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.desk h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.desk-empty {
+  margin: 0;
+  padding: 24px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+.desk-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.desk-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+}
+
+.level-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.level-chip:not(.level-3) {
+  color: #fff;
+}
+
+.asks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ask {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ask > .hint,
+.ask p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.ask-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.accepted .ask-status {
+  color: var(--ok);
+  box-shadow: inset 0 0 0 1px var(--ok);
+}
+
+.rejected .ask-status {
+  color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.withdrawn {
+  opacity: 0.6;
+}
+
+.er-req.accepted {
+  border-color: var(--ok);
+}
+
+.log {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.log time {
+  margin-right: 6px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.who {
+  margin-right: 4px;
+}
+
+.prep {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* 시민 화면의 자동 신고 카드 */
+.auto-report {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.auto-report .headline,
+.auto-report .lead {
+  margin: 0;
+}
+
+.badge.sim {
+  align-self: flex-start;
+  border-color: var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.countdown {
+  position: relative;
+  height: 8px;
+  margin: 8px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.countdown::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--danger-fill);
+  transform-origin: left;
+  animation: drain-x var(--sec) linear forwards;
+}
+
+@keyframes drain-x {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-actions .action {
+  flex: 1;
+  width: auto;
+}
+
+.stages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  padding: 0 0 12px 26px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.stage::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.stage::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: 9px;
+  width: 2px;
+  background: var(--border);
+}
+
+.stage:last-child::after {
+  display: none;
+}
+
+.stage strong {
+  display: block;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.stage.done strong,
+.stage.now strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.stage.done::before {
+  border-color: var(--ok);
+  background: var(--ok);
+}
+
+.stage.now::before {
+  border-color: var(--danger);
+  background: var(--danger-fill);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.real-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.incident-map {
+  height: 260px;
+}
+
+.pin.patient,
+.pin.ambulance,
+.pin.hosp {
+  font-size: 0.6875rem;
+}
+
+.pin.ambulance {
+  background: var(--danger-fill);
+}
+
+.pin.hosp {
+  background: #5d6673;
+}
+
+.pin.hosp.accepted {
+  background: #067647;
+}
+
+.pin.hosp.rejected {
+  background: #b42318;
+}
+
+.pin.hosp.withdrawn {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage.now::before {
+    animation: none;
+  }
+
+  .countdown::after {
+    animation-timing-function: steps(10);
   }
 }

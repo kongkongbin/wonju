@@ -1,4 +1,4 @@
-const LEVEL_LABEL = { 1: '소생', 2: '긴급', 3: '응급', 4: '준응급', 5: '비응급' };
+import { LEVEL_LABEL } from '../lib/triage/spoken.js';
 
 /** 안전 규칙이 한 일: 올렸는가, 신호는 있었지만 AI가 이미 그만큼 위급하게 봤는가, 신호가 없었는가 */
 function safetyText(result) {
