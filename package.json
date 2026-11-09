@@ -8,7 +8,7 @@
     "test:retrieve": "node --env-file=.env src/lib/rag/test-retrieve.js",
     "eval": "node --env-file=.env src/lib/rag/eval.js",
     "eval:triage": "node --env-file=.env src/lib/triage/eval.js",
-    "test:safety":"node src/lib/triage/test-safety.js",
+    "test:safety": "node src/lib/triage/test-safety.js",
     "test:hospitals": "node src/lib/hospital/test-nearby.js",
     "test:plan": "node src/lib/hospital/test-plan.js",
     "test:access": "node server/test-access.js",
@@ -27,6 +27,7 @@
     "leaflet": "^1.9.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "three": "^0.169.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

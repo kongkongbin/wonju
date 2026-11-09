@@ -11,6 +11,7 @@
   --warn-bg: #fffaeb;
   --warn: #b54708;
   --ok: #067647;
+  --body-3d: #a9b3c0;
   /* 단계 색은 흰 글자와의 대비 4.5:1 이상 (3단계만 어두운 글자) */
   --l1: #d92d20;
   --l2: #c2540a;
@@ -40,6 +41,7 @@
     --warn-bg: #33270f;
     --warn: #f5b25a;
     --ok: #75e0a7;
+    --body-3d: #7b8696;
   }
 }
 
@@ -1862,4 +1864,47 @@ a.action:active {
   .countdown::after {
     animation-timing-function: steps(10);
   }
+}
+
+/* 3D 몸: 2D 실루엣과 같은 높이. 끌어서 돌리므로 그 안에서는 페이지가 스크롤되지 않는다 */
+.body3d {
+  position: relative;
+  height: min(58vh, 560px);
+  touch-action: none;
+}
+
+.body3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.body3d.loading {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.body3d-wait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+/* 마우스를 올린 부위 이름 */
+.body3d-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
 }

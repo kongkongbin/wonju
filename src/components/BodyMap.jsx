@@ -1,7 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { PAIN_FEELS, PAIN_SCORES, PAIN_SINCE, painSentence } from '../lib/triage/body.js';
 import { ARM_LEFT_SIDE, ARM_RIGHT_SIDE, CHEST, HEAD, LEG_LEFT_SIDE, LEG_RIGHT_SIDE, LOWER_ABDOMEN, NECK, UPPER_ABDOMEN } from './bodyShapes.js';
 import { PhoneIcon } from './icons.jsx';
+
+// three.js가 커서 몸 그림을 열 때만 불러온다
+const Body3D = lazy(() => import('./Body3D.jsx'));
+// 3D를 돌리기 어려운 사람도 바로 고를 수 있게 큰 부위 버튼을 함께 둔다
+const QUICK = [
+  ['front', '머리'],
+  ['front', '가슴'],
+  ['front', '배'],
+  ['back', '등'],
+  ['back', '허리'],
+  ['front', '오른쪽 팔'],
+  ['front', '왼쪽 팔'],
+  ['front', '오른쪽 다리'],
+  ['front', '왼쪽 다리'],
+];
 
 // 좌표는 실루엣(bodyShapes.js)과 같은 800×900 기준이고, 그림에는 몸이 있는 부분만 보여 준다.
 // 앞모습은 마주 본 모습이라 화면 왼쪽이 그 사람의 오른쪽, 뒷모습은 화면 왼쪽이 그 사람의 왼쪽이다
@@ -206,6 +221,8 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
   const [parts, setParts] = useState([]);
   const [child, setChild] = useState(false);
   const [pain, setPain] = useState({}); // { score, feel, since }
+  const [use3d, setUse3d] = useState(true); // 3D를 그릴 수 없는 기기에서는 2D 실루엣으로 고른다
+  const [sex, setSex] = useState('male'); // 3D 몸 모양만 바꾼다 (판정 문장에는 넣지 않는다)
   const sentence = painSentence(parts, child, pain);
 
   function update(next) {
@@ -232,6 +249,16 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
     setZoom(null);
     setView(next);
   }
+
+  function pick(side, id) {
+    setView(side);
+    setZoom(id);
+  }
+
+  // 3D에서 빨갛게 보여 줄 큰 부위: 세부 부위를 하나라도 고른 곳
+  const hot = new Set(
+    [...VIEWS.front, ...VIEWS.back].filter((r) => parts.includes('온몸') || parts.includes(r.name) || r.parts.some((p) => parts.includes(p.name))).map((r) => r.id),
+  );
 
   if (!open) return null;
 
@@ -261,14 +288,34 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
               </button>
             ))}
           </div>
+          {use3d && !region && (
+            <div className="seg view-switch" role="group" aria-label="몸 모양">
+              {[
+                ['male', '남'],
+                ['female', '여'],
+              ].map(([v, label]) => (
+                <button key={v} type="button" className={sex === v ? 'on' : ''} aria-pressed={sex === v} onClick={() => setSex(v)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="child-check">
             <input type="checkbox" checked={child} onChange={(e) => update({ child: e.target.checked })} />
             아이가 아파요
           </label>
         </div>
-        <p className="hint">{region ? `${region.name}에서 아픈 곳을 눌러 주세요. 여러 곳을 골라도 됩니다.` : '아픈 부위를 누르면 크게 보여요.'}</p>
+        <p className="hint">
+          {region ? `${region.name}에서 아픈 곳을 눌러 주세요. 여러 곳을 골라도 됩니다.` : use3d ? '몸을 끌어서 돌려 보고, 아픈 부위를 누르면 크게 보여요.' : '아픈 부위를 누르면 크게 보여요.'}
+        </p>
 
-        {/* 앞뒤를 바꿀 때마다 새로 그려서 뒤집히는 움직임을 준다 */}
+        {/* 몸 전체는 3D로 돌려 보고, 누른 부위는 팀이 그린 2D 실루엣을 확대해 세부 부위를 고른다 */}
+        {!region && use3d ? (
+          <Suspense fallback={<div className="body3d loading">3D 몸을 불러오는 중…</div>}>
+            <Body3D key={sex} sex={sex} view={view} hot={hot} onPick={pick} onSide={setView} onFail={() => setUse3d(false)} />
+          </Suspense>
+        ) : (
+        /* 앞뒤를 바꿀 때마다 새로 그려서 뒤집히는 움직임을 준다 */
         <div className="figure flip" key={view}>
           <span className="figure-side" aria-hidden="true">
             {leftSide}
@@ -320,6 +367,7 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
             {rightSide}
           </span>
         </div>
+        )}
 
         {region ? (
           <>
@@ -332,6 +380,14 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
             </button>
           </>
         ) : (
+          <>
+          <div className="chips" role="group" aria-label="부위로 고르기">
+            {QUICK.map(([side, id]) => (
+              <button key={id} type="button" className="chip" onClick={() => pick(side, id)}>
+                {id}
+              </button>
+            ))}
+          </div>
           <div className="chips">
             {chip('온몸')}
             {parts
@@ -342,6 +398,7 @@ export default function BodyMap({ open, onClose, onChange, onSubmit }) {
                 </button>
               ))}
           </div>
+          </>
         )}
 
         {parts.length > 0 && (
