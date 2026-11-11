@@ -93,6 +93,7 @@ async function locate(id) {
     const plan = await requestPlan({ lat: place.lat, lon: place.lon, mode: 'er', patient: planSummary(r), pediatric: r.symptom.population === '소아', department: r.suggested_department });
     if (inc?.id !== id) return;
     update({ by: plan.by, queue: [...plan.steps.map((s) => ({ ...s.place, why: s.reason })), ...plan.others] });
+    if (plan.crowd) log('119', plan.crowd === 'full' ? '근처 응급실이 모두 병상 여유 없음' : '가까운 응급실이 모두 꽉 차 범위를 넓혀 찾음');
   } catch (e) {
     if (inc?.id === id) log('119', `병원 정보를 불러오지 못함: ${e.message}`);
   }
@@ -132,8 +133,8 @@ function notifyNext() {
   const batch = inc.queue.slice(0, BATCH).map((h, i) => ({
     ...h,
     status: 'waiting',
-    // 병상이 0이면 거절, 나머지는 수용. 병상 정보가 없는 곳은 확인하느라 조금 늦게 답한다
-    auto: h.erBeds !== 0,
+    // 병상이 0 이하(음수는 정원 초과)면 거절, 나머지는 수용. 병상 정보가 없는 곳은 확인하느라 조금 늦게 답한다
+    auto: h.erBeds == null || h.erBeds > 0,
     replyAt: now + (3 + i * 2 + (h.erBeds == null ? 2 : 0)) * 1000,
   }));
   update({ queue: inc.queue.slice(BATCH), hospitals: [...inc.hospitals, ...batch] });

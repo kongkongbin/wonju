@@ -161,7 +161,7 @@ function ErRequest({ h, inc }) {
               거절
             </button>
           </div>
-          <p className="hint">답하지 않으면 실시간 병상 정보로 자동 응답해요 (병상 0개면 거절).</p>
+          <p className="hint">답하지 않으면 실시간 병상 정보로 자동 응답해요 (병상 0개 이하면 거절).</p>
         </>
       )}
       {coming && inc.phase !== 'arrived' && (

@@ -20,6 +20,12 @@ function Notices({ notices }) {
   );
 }
 
+// 가까운 응급실이 모두 병상 여유가 없을 때 (서버 erCandidates)
+const CROWD = {
+  widened: '가까운 응급실이 모두 병상 여유가 없어 더 먼 곳까지 찾았습니다.',
+  full: '근처 응급실이 모두 병상 여유가 없습니다. 가기 전에 꼭 전화로 확인하고, 상태가 나쁘면 119에 연락하세요. 구급대가 받을 수 있는 병원을 찾아 줍니다.',
+};
+
 /**
  * 판정 뒤 갈 곳 1·2·3을 위치와 실시간 병상으로 골라 지도와 함께 보여 준다. 판정이 나오면 바로 위치를 묻는다.
  * urgent(KTAS 1~2·119 권고)는 119가 먼저라 가까운 응급실을 참고로만 보여 주고 길찾기는 두지 않는다
@@ -61,15 +67,17 @@ export default function Plan({ mode, summary, pediatric, department }) {
     );
   }
 
-  const { steps, others, by, note } = state.plan;
+  const { steps, others, by, note, crowd } = state.plan;
   const map = steps.length > 0 && <PlanMap center={state.center} picks={state.picks} others={others} />;
   const where = !state.pos && <p className="hint">위치를 받지 못해 원주시청 기준으로 보여 드립니다.</p>;
+  const crowded = crowd && <p className="note warn">{CROWD[crowd]}</p>;
 
   if (mode === 'urgent') {
     return (
       <div className="plan">
         <p className="hint">직접 이동하지 말고 119 구급대의 안내를 따르세요. 구급대에 참고로 알려 줄 수 있는 가까운 응급실입니다.</p>
         {where}
+        {crowded}
         {map}
         <ol className="plan-brief">
           {steps.map((s) => (
@@ -90,6 +98,7 @@ export default function Plan({ mode, summary, pediatric, department }) {
       </div>
       {where}
       {note && <p className="note warn">{note}</p>}
+      {crowded}
       {steps.length === 0 && <p className="hint">주변 병원 정보를 찾지 못했습니다. 급하면 119에 연락하세요.</p>}
       {map}
       <ol className="steps">

@@ -33,6 +33,21 @@ export function rankByRule(hospitals) {
   return [...hospitals].sort((a, b) => group(a) - group(b) || a.km - b.km);
 }
 
+/** 병상 수를 알고 0 이하인 곳. 음수는 정원을 넘겨 받고 있다는 뜻이다 */
+const isFull = (h) => h.erBeds != null && h.erBeds <= 0;
+const WIDE = 10; // 가까운 5곳이 모두 꽉 차면 이만큼 넓혀 찾는다
+
+/**
+ * 가까운 응급실 후보. 모두 꽉 찼으면 범위를 넓히고, 넓혀도 꽉 찼으면 crowd: 'full'로 알린다
+ * @returns {Promise<{hospitals: object[], crowd?: 'widened'|'full'}>} widened: 넓혀서 병상이 있거나 정보 없는 곳을 찾음
+ */
+export async function erCandidates(lat, lon, spot, load = nearbyHospitals) {
+  const near = await remember(`er:${spot}`, () => load(lat, lon));
+  if (!near.length || !near.every(isFull)) return { hospitals: rankByRule(near) };
+  const wide = await remember(`er-wide:${spot}`, () => load(lat, lon, WIDE));
+  return { hospitals: rankByRule(wide), crowd: wide.every(isFull) ? 'full' : 'widened' };
+}
+
 const SYSTEM = `너는 KTAS 판정을 받은 환자에게 지금 갈 곳을 골라 주는 보조 도구다.
 
 규칙:
@@ -80,16 +95,16 @@ const notIn = (steps) => (p) => !steps.some((s) => s.place.id === p.id);
 /**
  * @param {{mode: 'urgent'|'er'|'mild', lat: number, lon: number, patient: string, pediatric: boolean, department: string}} req
  *   mode: urgent는 KTAS 1~2·119 권고, mild는 경증 안내, er은 그 밖 / patient: 판정 요약
- * @returns {Promise<{steps: {type: 'er'|'clinic', place: object, reason: string, later?: boolean}[], others: object[], by: 'ai'|'rule', note?: string}>}
- *   later: 지금이 아니라 증상이 나빠지면 갈 곳, others: 지도에만 보여 줄 나머지
+ * @returns {Promise<{steps: {type: 'er'|'clinic', place: object, reason: string, later?: boolean}[], others: object[], by: 'ai'|'rule', note?: string, crowd?: 'widened'|'full'}>}
+ *   later: 지금이 아니라 증상이 나빠지면 갈 곳, others: 지도에만 보여 줄 나머지, crowd: erCandidates 참고
  */
 export async function makePlan({ mode, lat, lon, patient, pediatric, department }) {
   const spot = `${lat.toFixed(3)},${lon.toFixed(3)}`;
-  const hospitals = rankByRule(await remember(`er:${spot}`, () => nearbyHospitals(lat, lon)));
+  const { hospitals, crowd } = await erCandidates(lat, lon, spot);
 
   if (mode === 'urgent') {
     const steps = hospitals.slice(0, 3).map((place) => ({ type: 'er', place, reason: erReason(place) }));
-    return { steps, others: hospitals.filter(notIn(steps)), by: 'rule' };
+    return { steps, others: hospitals.filter(notIn(steps)), by: 'rule', crowd };
   }
 
   let note;
@@ -105,12 +120,12 @@ export async function makePlan({ mode, lat, lon, patient, pediatric, department 
         ...picks.map((p) => ({ type: 'clinic', ...p })),
         ...(er ? [{ type: 'er', place: er, reason: `증상이 나빠지면: ${erReason(er)}`, later: true }] : []),
       ];
-      return { steps, others: [...clinics, ...hospitals].filter(notIn(steps)), by };
+      return { steps, others: [...clinics, ...hospitals].filter(notIn(steps)), by, crowd };
     }
     note = clinics ? '지금 진료 중인 병·의원을 근처에서 찾지 못해 응급실을 보여 드립니다.' : '병·의원 정보를 불러오지 못해 응급실을 보여 드립니다.';
   }
 
   const { picks, by } = await pickPlaces('er', hospitals, patient, 3);
   const steps = picks.map((p) => ({ type: 'er', ...p }));
-  return { steps, others: hospitals.filter(notIn(steps)), by, note };
+  return { steps, others: hospitals.filter(notIn(steps)), by, note, crowd };
 }
